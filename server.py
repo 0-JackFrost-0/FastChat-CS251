@@ -1,123 +1,124 @@
-import socket, select
+import socket
+from user_info import *
+from time import ctime, sleep
+import sys
+import pickle
+from msg import *
+from colorama import init
+from termcolor import colored
+from unsent import *
+import bcrypt
 
-#Function to send message to all connected clients
-def send_to_all (sock, message):
-	#Message not forwarded to server and sender itself
-	for socket in connected_list:
-		if socket != server_socket and socket != sock :
-			try :
-				# print(message)
-				socket.send(message.encode('ascii'))
-			except :
-				# if connection not available
-				socket.close()
-				connected_list.remove(socket)
+# initializing database path, not required with postgresql
+user_info_db_path = "databases/userInfo.db"
 
-def send_to_one(message, name):
-    # print(name)
-    # socket = {i for i in connName if connName[i] == name}
-    for sockets in connName:
-        if connName[sockets] == name:
-            socket = sockets
-            break
+# signin stuff
+if len(sys.argv)==3:
+    HOST = sys.argv[1]
+    PORT = int(sys.argv[2])
+else:
+    print(f"Usage: {sys.argv[0]} <host> <port>")
+    sys.exit(1)
+
+# other global variables and constants
+BUFSIZE = 4096
+ADDR = (HOST, PORT)
+AD = {}
+# TODO
+
+pub_keys = {}
+groups = {}
+received = b""
+
+# binding server socket
+server_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+server_sock.bind(ADDR)
+
+print(f"Listening on {(HOST,PORT)}")
+# TODO
+# will have to be changed, if multiple servers are being implemented
+###################
+create_table(user_info_db_path)
+###################
+
+while True:
     try:
-        socket.send(message.encode('ascii'))
+        data, addr = server_sock.recvfrom(BUFSIZE)
     except:
-        print('ami here?')
-        socket.close()
-        connected_list.remove(socket)
+        print('a connection closed')
+        break
 
-
-if __name__ == "__main__":
-    name=""
-    #dictionary to store address corresponding to username
-    record={}
-    connName={}
-    # List to keep track of socket descriptors
-    connected_list = []
-    buffer = 4096
-    port = 5001
-
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    server_socket.bind(("localhost", port))
-    server_socket.listen(10) #listen atmost 10 connection at one time
-
-    # Add server socket to the list of readable connections
-    connected_list.append(server_socket)
-
-    print("\33[32m \t\t\t\tSERVER WORKING \33[0m")
-
-    while True:
-        # Get the list sockets which are ready to be read through select
-        rList,wList,error_sockets = select.select(connected_list,[],[])
-
-        for sock in rList:
-            #New connection
-            if sock == server_socket:
-                # Handle the case in which there is a new connection recieved through server_socket
-                sockfd, addr = server_socket.accept()
-                name=sockfd.recv(buffer)
-                connected_list.append(sockfd)
-                record[addr]=""
-                connName[sockfd]=""
-                #print "record and conn list ",record,connected_list
-                
-                #if repeated username
-                if name in record.values():
-                    sockfd.send("\r\33[31m\33[1m Username already taken!\n\33[0m")
-                    del record[addr]
-                    del connName[sockfd]
-                    connected_list.remove(sockfd)
-                    sockfd.close()
+    # to decode the data
+    message = pickle.loads(data)
+    msgtype = message.type
+    sender = message.sender
+    receiver = message.receiver
+    length = message.length
+    msg_ = message.msg
+    if msgtype == 'connect':
+        if addr not in AD.values():
+            pub_keys[sender] = msg_
+            for name, address in AD.items():
+                package = pickle.dumps(msg('key', sender, name,msg_))
+                server_sock.sendto(package, address)
+            AD[sender] = addr
+            for name, pubkey in pub_keys.items():
+                if name == sender:
                     continue
-                else:
-                    #add name and address
-                    record[addr]=name.decode('ascii')
-                    connName[sockfd]=name.decode('ascii')
-                    print("Client (%s, %s) connected" % addr," [",record[addr],"]")
-                    msg = "\33[32m\33[1m\r Hello " + name.decode('ascii') +"!\n\33[0m\n"
-                    sockfd.send(msg.encode('ascii'))
-                    sockfd.send(b"\33[32m\r\33[1m Welcome to CLM. Enter 'bye' anytime to exit\n\33[0m")
-                    send_to_all(sockfd, "\33[32m\33[1m\r "+name.decode('ascii')+" joined the conversation \n\33[0m")
-
-            #Some incoming message from a client
-            else:
-                # Data from client
-                # print("reached else statement")
-                try:
-                    data1 = sock.recv(buffer)
-                    #print "sock is: ",sock
-                    # print(data1 + b'\n')
-                    data=data1.decode('ascii').strip()
-                    print ("\ndata received: ",data)
-                    #get addr of client sending the message
-                    i,p=sock.getpeername()
-                    if data == "bye":
-                        # print("reaching here")
-                        msg="\r\33[1m"+"\33[31m "+record[(i,p)]+" left the conversation \33[0m\n"
-                        send_to_all(sock,msg)
-                        print(f"Client (%s, %s) is offline" % (i,p)," [",record[(i,p)],"]")
-                        del record[(i,p)]
-                        connected_list.remove(sock)
-                        sock.close()
-                        continue
-
-                    else:
-                        to_name = sock.recv(buffer).decode('ascii')
-                        print("sending message to " + to_name)
-                        msg="\r\33[1m"+"\33[35m "+record[(i,p)]+": "+"\33[0m"+data+"\n"
-                        send_to_one(msg, to_name)
-                        # send_to_all(sock,msg)
-            
-                #abrupt user exit
-                except:
-                    (i,p)=sock.getpeername()
-                    send_to_all(sock, "\r\33[31m \33[1m"+record[(i,p)]+" left the conversation unexpectedly\33[0m\n")
-                    print(f"Client (%s, %s) is offline (error)" % (i,p)," [",record[(i,p)],"]\n")
-                    del record[(i,p)]
-                    connected_list.remove(sock)
-                    sock.close()
-                    continue
-
-    server_socket.close()
+                package = pickle.dumps(msg('key', name, sender,pubkey))
+                server_sock.sendto(package, addr)
+            message = f"{sender} has entered the chat "
+            for name, address in AD.items():
+                if name != sender: 
+                    package = pickle.dumps(msg('receive', 'server', name,message))
+                    server_sock.sendto(package, address)
+    elif msgtype == 'receive':
+        if(receiver in AD):
+            server_sock.sendto(data, AD[receiver])
+        else:
+            message = f"{receiver} does not exist"
+            package = pickle.dumps(msg('recieve','server', sender,message))
+            server_sock.sendto(package, addr)
+    # elif msgtype == 'group':
+    #     print(msg_)
+    #     for r_name,addr in 
+    #     else:
+    #         message = f"{receiver} does not exist"
+    #         package = pickle.dumps(msg('recieve','server', sender,message))
+    #         server_sock.sendto(package, addr)
+    elif msgtype == 'disconnect':
+        if(sender in AD):
+            AD.pop(sender)
+            pub_keys.pop(sender)
+            for name, addr in AD.items():
+                package = pickle.dumps(msg('disconnect', sender, name,'cancel'))
+                server_sock.sendto(package, addr)
+        else:
+            message = f"{receiver} does not exist"
+            package = pickle.dumps(msg('recieve','server', sender,message))
+            server_sock.sendto(package, addr)
+    elif msgtype == 'register':
+        username, password = (msg_).split(' ', 1)
+        password = password.encode()
+        # Adding the salt to password
+        salt = bcrypt.gensalt()
+        # Hashing the password
+        hashed = bcrypt.hashpw(password, salt)  
+        state = store_new_info(username, salt,hashed,'ONLINE', user_info_db_path)
+        if(state):
+            package = pickle.dumps(msg('register', 'server', 'unknown','success'))
+            server_sock.sendto(package, addr)
+        else:
+            package = pickle.dumps(msg('register', 'server', 'unknown','fail'))
+            server_sock.sendto(package, addr)
+    elif msgtype == 'login':
+        username, password = (msg_).split(' ', 1) 
+        password = password.encode() 
+        state = check_login_info(username, password, user_info_db_path)
+        if(state):
+            package = pickle.dumps(msg('login', 'server', 'unknown','success'))
+            server_sock.sendto(package, addr)
+        else:
+            package = pickle.dumps(msg('login', 'server', 'unknown', 'fail'))
+            server_sock.sendto(package, addr)
+server_sock.close()

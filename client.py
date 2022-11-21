@@ -1,105 +1,159 @@
-import socket, select, string, sys
+from user_info import *
+import sys
+import socket, select
+import rsa
+import datetime
+from time import ctime
+import getpass
+import pickle
+import threading
+from msg import *
+from colorama import init
+from termcolor import colored
 
-#Helper function (formatting)
-def display() :
-	you="\33[33m\33[1m"+" You: "+"\33[0m"
-	sys.stdout.write(you)
-	sys.stdout.flush()
+# datetime.datetime.strptime(time.ctime(), "%c")
 
-def main():
+# basic variables
+buffer = 4096
 
-    # simulates temp database
-    user_info = {
-        "jack": "jack",
-        "john": "john12",
-        "jill": "ligma@69"
-    }
-    # can also be added in the database
-    user_active = {
-        "jack": False,
-        "john": False,
-        "jill": False
-    }
-    if len(sys.argv)<2:
-        host = input("Enter host ip address: ")
+pub_keys={}
+username = ""
+
+# utilising command line arguments, throws error if not passed correctly.
+if len(sys.argv)==3:
+    host = sys.argv[1]
+    port = int(sys.argv[2])
+else:
+    print(f"Usage: {sys.argv[0]} <host> <port>")
+    sys.exit(1)
+
+addr = (host,port)
+
+# initialising the socket, throws error if not connected
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+try :
+    s.connect(addr)
+except :
+    print(colored("Can't connect to the server",'red'))
+    sys.exit()
+
+# Function that decrypts the message from the user, and prints it out
+def show_message(sender, msg):
+    # print('msg receive')
+    if(sender != 'server'):
+        pass
+    if msg[-1] != '\n':
+        msg = msg+ " " +colored(ctime(),'blue')
     else:
-        host = sys.argv[1]
+        msg = msg + ctime()
+    if(sender != 'server'):
+        msg = colored(f"{sender}: ",'green')+msg
+    else:
+        msg = colored(msg,'red')  
+    print(msg)
 
-    port = 5001
-    
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(2)
-    
-     # connecting host
-    try :
-        s.connect((host, port))
-    except :
-        print("\33[31m\33[1m Can't connect to the server \33[0m")
-        sys.exit()
-    
-    login_option = int(input("\33[34m\33[1m Welcome to Command Line Messenger (CLM): \n 1) New User \n 2) Existing User \33[0m\n \33[36m\33[1m > \33[0m"))
-    while True:
-        if login_option == 1:
-            #asks for user name
-            name=input("\33[34m\33[1m CREATING NEW ID:\n Enter username: \33[0m")
-            if name in user_info.keys():
-                print("\33[31m\33[1m \rUsername already exists, please enter a new name.\n \33[0m")
-            else:
-                passw = input("\33[34m\33[1m Enter password: \33[0m")
-                user_info[name] = passw
-                user_active[name] = True
-                break
-
-        elif login_option == 2:
-            name = input("\33[34m Enter username: \33[0m")
-            if name not in user_info.keys():
-                print("\33[31m\33[1m \rUsername doesn't exists, please try again.\n \33[0m")
-            else:
-                passw = input("\33[34m\33[1m Enter password: \33[0m")
-                if user_info[name] == passw:
-                    user_active[name] = True
-                    break
+# Function that recieves the message from the server
+def recv_message(private_key):
+    while not stop_recieve_thread:
+        msg = s.recv(buffer)
+        if not msg:
+            sys.exit(0)
+            # return
+        if len(msg) != 0:
+            message = pickle.loads(msg)
+            if(message.type == 'receive'):
+                if message.sender != 'server':
+                    decrypted_msg = rsa.decrypt(message.msg,private_key).decode()
+                    show_message(message.sender,decrypted_msg)
                 else:
-                    print("\33[31m\33[1m \rIncorrect password entered, please try again.\n \33[0m")
-    #if connected
-    # s.send(name)
-    s.send(name.encode('ascii'))
+                    show_message(message.sender,message.msg)
+            elif(message.type == 'key'):
+                public_partner_key = message.msg
+                pub_keys[message.sender] = public_partner_key
+            elif(message.type == 'group'):
+                pass
+            elif(message.type == 'disconnect'):
+                pub_keys.pop(message.sender)
+    print("receive stopped")
+# Function to send the message to the given username
+def send_message(message):
+        r_name = input("Whom to send message?: ")
+        if r_name in pub_keys:
+            public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
+            message = rsa.encrypt(message.encode(),public_partner)
+            package = pickle.dumps(msg('receive', username, r_name, message))
+            s.send(package)
+        else:
+            print(f"{r_name} is offline")
 
-    display()
-    # while True:
-    #     msg_option = int(input("\33[34m\33[1m OPTIONS: \n 1) New Chat \n 2) New Group \n 3) Open Chat \n 4) Open Group \n 5) Quit"))
+def send_group_message(message):
+        r_name = input("Whom to send message?: ")
+        if r_name in pub_keys:
+            public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
+            message = rsa.encrypt(message.encode(),public_partner)
+            package = pickle.dumps(msg('receive', username, r_name, message))
+            s.send(package)
+        else:
+            print(f"{r_name} is offline")
 
+def login():
+    global username
+    print("1 - LOGIN")
+    print("2 - NEW USER")
+    opt = int(input(">>> "))
     while True:
-        socket_list = [sys.stdin, s]
-        
-        # Get the list of sockets which are readable
-        rList, wList, error_list = select.select(socket_list , [], [])
-        
-        for sock in rList:
-            #incoming message from server
-            if sock == s:
-                data = sock.recv(4096)
-                # print(data)
-                if not data :
-                    print('\33[31m\33[1m \rDISCONNECTED!!\n \33[0m')
-                    user_active[name] = False
-                    sys.exit()
-                else :
-                    ## TODO
-                    ## modify stuff in server to only send name, rest will be handled here
-                    sys.stdout.write(data.decode('ascii'))
-                    if "joined the conversation" in data.decode('ascii'):
-                        name = data.decode('ascii').replace("joined the conversation", "").strip()
-                        user_info[name] = ""
-                    display()
-        
-            #user entered a message
-            else :
-                msg=sys.stdin.readline()
-                s.send(msg.encode('ascii'))
-                to_name = input("\33[34m\33[1m WHOM TO SEND THE MESSAGE:\n Enter username: \33[0m")
-                s.send(to_name.encode('ascii'))
-                display()
+        if(opt == 1):
+            username = input("Username: ")
+            password = getpass.getpass()
+            message = username+" "+password
+            data = pickle.dumps(msg('login',username,'server',message))
+            s.send(data)
+            conf = s.recv(buffer)
+            message = pickle.loads(conf).msg
+            if message == 'success':
+                print(f"Welcome back {username}")
+                return opt
+            else:
+                print("Invalid login, please try again")
+        elif(opt == 2):
+            username = input("Username: ")
+            password = getpass.getpass()
+            message = username+" "+password
+            data = pickle.dumps(msg('register',username,'server',message))
+            s.send(data)
+            conf = s.recv(buffer)
+            message = pickle.loads(conf).msg
+            if message == 'success':
+                print(f"You have successfully registered")
+                return opt
+            else:
+                print("Username already taken. Try another username")
+
+# Main function, runs the whole Command Line GUI thingy, will decompose code further
+def main():
+    global stop_recieve_thread
+    stop_recieve_thread = False
+    opt = login()
+    public_key,private_key = rsa.newkeys(1024)
+    pub_keys[username] = public_key.save_pkcs1("PEM")
+    message = public_key.save_pkcs1("PEM")
+    data = pickle.dumps(msg('connect',username,'server',message))
+    s.send(data)
+    recieve_thread = threading.Thread(target=recv_message,args=(private_key,))
+    recieve_thread.start()
+    while True:
+        chat = input()
+        if(chat[0] == '/'):
+            # if(chat == "/quit"):
+            #     data = pickle.dumps(msg('disconnect',username,'server','cancel'))
+            #     s.send(data)
+            #     stop_recieve_thread = True
+            #     break
+            pass
+        else:
+            send_message(chat)
+
+
 
 if __name__ == "__main__":
     main()
