@@ -19,7 +19,7 @@ python3 server.py 127.0.0.1 <port>
 python3 client.py 127.0.0.1 <load_balancer_port>
 # this code will be run for as many users there are
 ```
-
+---
 ## High Throughput
 We have implemented _multiple servers_, with _load balancing strategies_.
 Having seen the least connection and the round robin strategy, we chose to perform random allocation of the servers, to get the simplicity of the implementation, as well as the efficiency of the least connection method.
