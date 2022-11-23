@@ -5,7 +5,7 @@ import random
 from itertools import cycle
 import pickle
 
-SERVER_POOL = [('localhost', 5001), ('localhost', 5000)]
+SERVER_POOL = [('localhost', 5000), ('localhost', 5001)]
 
 
 ITER = cycle(SERVER_POOL)

@@ -33,24 +33,25 @@ else:
     print(f"Usage: {sys.argv[0]} <host> <port>")
     sys.exit(1)
 
-# load_balance_addr = (host,port)
+load_balance_addr = (host,port)
 
 # initialising the socket, throws error if not connected
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# try :
-#     s.connect(load_balance_addr)
-#     print("connected to", load_balance_addr)
-#     welcm_msg = str(port)
-#     s.send(pickle.dumps(welcm_msg))
-# except :
-#     print("\33[31m\33[1m Can't connect to the load balancing server \33[0m")
-#     sys.exit()
-
-# port = int(pickle.loads(s.recv(buffer)))
 try :
-    # print("connected to", port)
-    s.connect((host, port))
+    # s.connect(load_balance_addr)
+    # print("connected to", load_balance_addr)
+    welcm_msg = str(port)
+    s.sendto(pickle.dumps(welcm_msg), load_balance_addr)
 except :
+    print("\33[31m\33[1m Can't connect to the load balancing server \33[0m")
+    sys.exit()
+
+port = int(pickle.loads(s.recv(buffer)))
+try :
+    pass
+    # print("connected to", port)
+    # s.connect((host, port))
+except:
     print("\33[31m\33[1m Can't connect to the server \33[0m")
     sys.exit()
 
@@ -141,7 +142,7 @@ def change_in_thread():
 def recv_message(private_key):
         # print("recving")
         while True:
-            msg_ = s.recv(buffer)
+            msg_, addr = s.recvfrom(buffer)
             # print(pickle.loads(msg_).msg)
             if not msg_:
                 sys.exit(0)
@@ -167,6 +168,7 @@ def recv_message(private_key):
                     pass
                 elif(message.type == 'image'):
                     # change_in_thread()
+                    print(f"Image received from {message.sender}")
                     address = "newimage.jpeg"
                     image_str = decrypt_blob(message.msg,private_key)
                     decodeit = open(address, 'wb')
@@ -176,15 +178,16 @@ def recv_message(private_key):
                     print(output)
                     # change_in_thread()
                 elif(message.type == 'group_image'):
-                    change_in_thread()
-                    address = input("Image received. Address to store: ")
+                    #change_in_thread()
+                    print(f"Image received from {message.sender} on group {message.group_name}")
+                    address = "newimage.jpeg"
                     image_str = decrypt_blob(message.msg,private_key)
                     decodeit = open(address, 'wb')
                     decodeit.write(base64.b64decode((image_str)))
                     decodeit.close()
                     output = climage.convert(address)
                     print(output)
-                    change_in_thread()
+                    #change_in_thread()
                 if(message.type == 'group'):
                     group_name = message.group_name
                     if message.msg == 'admin':
@@ -198,10 +201,10 @@ def recv_message(private_key):
                             member = input("Enter the username of the member: ")
                             if member == "exit":
                                 data = pickle.dumps(msg('group',username,member,'exit',group_name))
-                                s.send(data)
+                                s.sendto(data, (host, port))
                                 break
                             data = pickle.dumps(msg('group',username,member,'add',group_name))
-                            s.send(data)
+                            s.sendto(data, (host, port))
                             conf = s.recv(buffer)
                             message = pickle.loads(conf).msg
                             if message == 'success':
@@ -215,7 +218,7 @@ def recv_message(private_key):
                     elif message.msg == 'added_successfully':
                         member  = input("Enter name of the member to add: ")
                         data = pickle.dumps(msg('group',username,member,'add',group_name))
-                        s.send(data)
+                        s.sendto(data, (host, port))
                         conf = s.recv(buffer)
                         message = pickle.loads(conf).msg
                         if message == 'success':
@@ -225,7 +228,7 @@ def recv_message(private_key):
                     elif message.msg == 'kicked_successfully':
                         member  = input("Enter name of the member to kick: ")
                         data = pickle.dumps(msg('group',username,member,'kick',group_name))
-                        s.send(data)
+                        s.sendto(data, (host, port))
                         conf = s.recv(buffer)
                         message = pickle.loads(conf).msg
                         if message == 'success':
@@ -261,19 +264,28 @@ def send_message(message):
                 public_partner = rsa.PublicKey.load_pkcs1(send_key)
                 message = encrypt_blob(message,public_partner)
                 package = pickle.dumps(msg('receive', username, r_name, message.decode()))
-                s.send(package)
+                s.sendto(package, (host, port))
             else:
                 print(f"{r_name} is offline")
         elif grp_or_ind == "g":
+            in_grp = False
             grp_name = input("Which group to send message?: ")
+
             members = view_all_members(group_db_path, grp_name)
+            for member in members:
+                if member[0] == username:
+                    in_grp = True
+            if in_grp:
             # for r_name in pub_keys:
-            for r_name in members:
-                # public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
-                public_partner = rsa.PublicKey.load_pkcs1(get_pubkey(user_info_db_path, r_name[0]))
-                message_ = encrypt_blob(message,public_partner)
-                package = pickle.dumps(msg('group', username, r_name[0], message_.decode(),grp_name))
-                s.send(package)
+                for r_name in members:
+                    if r_name[0] != username:
+                    # public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
+                        public_partner = rsa.PublicKey.load_pkcs1(get_pubkey(user_info_db_path, r_name[0]))
+                        message_ = encrypt_blob(message,public_partner)
+                        package = pickle.dumps(msg('group', username, r_name[0], message_.decode(),grp_name))
+                        s.sendto(package, (host, port))
+            else:
+                print(colored("You are not a part of this group", 'red'))
 
 def send_image(address):
         with open(address, "rb") as imageFile:
@@ -288,7 +300,7 @@ def send_image(address):
                 public_partner = rsa.PublicKey.load_pkcs1(send_key)
                 message = encrypt_blob(image_str.decode(),public_partner)
                 package = pickle.dumps(msg('image', username, r_name, message.decode()))
-                s.send(package)
+                s.sendto(package, (host, port))
             else:
                 print(f"{r_name} is offline")
         elif grp_or_ind == "g":
@@ -300,7 +312,7 @@ def send_image(address):
                 public_partner = rsa.PublicKey.load_pkcs1(get_pubkey(user_info_db_path, r_name[0]))
                 message_ = encrypt_blob(image_str.decode(),public_partner)
                 package = pickle.dumps(msg('group_image', username, r_name[0], message_.decode(),grp_name))
-                s.send(package)
+                s.sendto(package, (host, port))
 
 def login():
     global username
@@ -313,7 +325,7 @@ def login():
             password = getpass.getpass()
             message = username+" "+password
             data = pickle.dumps(msg('login',username,'server',message))
-            s.send(data)
+            s.sendto(data, (host, port))
             conf = s.recv(buffer)
             message = pickle.loads(conf).msg
             if message == 'success':
@@ -326,12 +338,12 @@ def login():
             password = getpass.getpass()
             message = username+" "+password
             data = pickle.dumps(msg('register',username,'server',message))
-            s.send(data)
+            s.sendto(data, (host, port))
             public_key,private_key = rsa.newkeys(1024)
             mesg1 = public_key.save_pkcs1("PEM")
             mesg2 = private_key.save_pkcs1("PEM")
-            s.send(mesg1)
-            s.send(mesg2)
+            s.sendto(mesg1, (host, port))
+            s.sendto(mesg2, (host, port))
             conf = s.recv(buffer)
             message = pickle.loads(conf).msg
             if message == 'success':
@@ -366,7 +378,7 @@ def main():
     # public_key,private_key = rsa.newkeys(1024)
     message = public_key.save_pkcs1("PEM").decode()
     data = pickle.dumps(msg('connect',username,'server',message))
-    s.send(data)
+    s.sendto(data, (host, port))
     receive_thread = threading.Thread(target=recv_message,args=(private_key,))
     receive_thread.start()
     while True:
@@ -378,10 +390,11 @@ def main():
         if(chat[0] == '\\'):
             if(chat == "\\quit"):
                 data = pickle.dumps(msg('disconnect',username,'server','cancel'))
-                s.send(data)
+                s.sendto(data, (host, port))
+                s.connect((host, port))
                 s.shutdown(socket.SHUT_RDWR)
                 receive_thread.join()
-                s.close()
+                # s.close()
                 sys.exit()
             if(chat == "\\online"):
                 view_online(user_info_db_path)
@@ -395,22 +408,22 @@ def main():
             elif(chat == "\\kick"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group',username,'server','kick',grp))
-                s.send(data)
+                s.sendto(data, (host, port))
                 change_in_thread()
             elif(chat == "\\add"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group',username,'server','add',grp))
-                s.send(data)
+                s.sendto(data, (host, port))
                 change_in_thread()
             elif(chat == "\\delgrp"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group',username,'server','delete',grp))
-                s.send(data)
+                s.sendto(data, (host, port))
                 change_in_thread()
             elif(chat == "\\create"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group',username,'server','create',grp))
-                s.send(data)
+                s.sendto(data, (host, port))
                 change_in_thread()
         else:
             chat = f"{chat} " + colored(ctime(),'blue')
