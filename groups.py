@@ -17,6 +17,21 @@ def create_grp_table(path,grpname,username):
     except:
         return False
 
+def make_admin(path,grpname,username):
+    connection = sqlite3.connect(path)
+    cur = connection.cursor()
+    try:
+        query = f'''UPDATE {grpname} SET admin = 1 WHERE usernames = '{username}' '''
+        cur.execute(query)
+        print(f"Successfully made {username} admin of the group {grpname}")
+        cur.execute(query)
+        connection.commit()
+        cur.close()
+        connection.close()
+        return True
+    except:
+        return False
+
 def view_all_members(path,grpname):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -32,6 +47,7 @@ def drop_table(path,grpname):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute(f"DROP TABLE {grpname}")
+    connection.commit()
     cur.close()
     connection.close()
 
@@ -71,21 +87,12 @@ def check_admin(path,grpname,username):
     # print(username)
     return False
 
-def make_admin(path,grpname,username):
-    connection = sqlite3.connect(path)
-    cur = connection.cursor()
-    try:
-        cur.execute(f"UPDATE {grpname} SET admin = 1 WHERE usernames = '{username}'")
-    except:
-        print("Error making admin")
-    cur.close()
-    connection.close()
-
 def delete_member(path,grpname,username):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     try:
         cur.execute(f"DELETE from {grpname} WHERE usernames = '{username}'")
+        connection.commit()
         cur.close()
         connection.close()
         return True

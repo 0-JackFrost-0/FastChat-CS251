@@ -26,7 +26,7 @@ else:
     sys.exit(1)
 
 # other global variables and constants
-BUFSIZE = 4194304
+BUFSIZE = 65536
 ADDR = (HOST, PORT)
 AD = {}
 # TODO
@@ -110,12 +110,10 @@ while True:
                 stuff = server_sock.recv(BUFSIZE)
                 addmem = pickle.loads(stuff)
                 if add_member(group_info_db_path, addmem.group_name, addmem.receiver):
-                    server_sock.sendto(pickle.dumps(msg('group', addmem.receiver, sender, 'success', grp)), addr)
                     server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'success', grp)), addr)
                     if check_username_online(user_info_db_path,addmem.receiver):
                         message = f"You have been added to the group {addmem.group_name}"
                         package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
-                        # server_sock.sendto(package, AD[addmem.receiver])
                         server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
                         insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
                     else:
@@ -124,7 +122,26 @@ while True:
                 else:
                     server_sock.sendto(pickle.dumps(msg('group', addmem.receiver, sender, 'failed_adding', grp)), addr)
             else:
-                server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'not_admin', grp)), addr)     
+                server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'not_admin', grp)), addr)
+        elif msg_ == "make_admin":
+            if check_admin(group_info_db_path, grp, sender):
+                server_sock.sendto(pickle.dumps(msg('group', sender, sender, 'made_admin', grp)), addr)
+                stuff = server_sock.recv(BUFSIZE)
+                addmem = pickle.loads(stuff)
+                if make_admin(group_info_db_path, addmem.group_name, addmem.receiver):
+                    server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'success', grp)), addr)
+                    if check_username_online(user_info_db_path,addmem.receiver):
+                        message = f"You have been made admin of the group {addmem.group_name} by {addmem.sender}"
+                        package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
+                        server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
+                        insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
+                    else:
+                        message = f"You have been made admin of the group {addmem.group_name} by {addmem.sender}"
+                        insert_to_unread_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
+                else:
+                    server_sock.sendto(pickle.dumps(msg('group', addmem.receiver, sender, 'failed_adding', grp)), addr)
+            else:
+                server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'not_admin', grp)), addr)          
         elif msg_ == "delete":
             if check_admin(group_info_db_path, grp, sender):
                 drop_table(group_info_db_path, grp)
@@ -150,7 +167,6 @@ while True:
                 delmem = pickle.loads(stuff)
                 if delete_member(group_info_db_path, grp, delmem.receiver):
                     server_sock.sendto(pickle.dumps(msg('group', delmem.receiver, sender, 'success', grp)), addr)
-                    server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'success', grp)), addr)
                     if check_username_online(user_info_db_path,delmem.receiver):
                         message = f"You have been kicked from the group {delmem.group_name} by {delmem.sender}"
                         package = pickle.dumps(msg('receive', 'server', delmem.receiver,message))

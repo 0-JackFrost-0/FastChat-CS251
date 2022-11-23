@@ -24,7 +24,7 @@ def insert_to_unread_db(path,sender,receiver,message,type,datetime,grp):
             return True
         else:
             mintime = cur.execute(f"SELECT MIN(time) FROM UNREAD WHERE receiver = '{receiver}'").fetchall()[0][0]
-            cur.execute(f"DELETE FROM UNREAD WHERE time={mintime}")
+            cur.execute(f"DELETE FROM UNREAD WHERE time='{mintime}' ")
             query = '''INSERT INTO UNREAD VALUES(?,?,?,?,?,?)'''
             cur.execute(query,(sender,receiver,message,type,datetime,grp))
             print(f"Successfully stored the message for {receiver}")
@@ -73,7 +73,7 @@ def insert_to_read_db(path,sender,receiver,message,type,datetime,grp):
             return True
         else:
             mintime = cur.execute(f"SELECT MIN(time) FROM READ where receiver = '{receiver}'").fetchall()[0][0]
-            cur.execute(f"DELETE FROM READ WHERE time={mintime}")
+            cur.execute(f"DELETE FROM READ WHERE time='{mintime}' ")
             query = '''INSERT INTO READ VALUES(?,?,?,?,?,?)'''
             cur.execute(query,(sender,receiver, message,type,datetime,grp))
             print(f"Successfully stored the message for {receiver}")
@@ -91,7 +91,6 @@ def return_all_read_messages(path,name):
     cur = connection.cursor()
     cur.execute(f"SELECT * from READ WHERE receiver = '{name}' ORDER BY time")
     messages = cur.fetchall()
-    cur.execute(f"DELETE FROM READ WHERE receiver = '{name}'")
     connection.commit()
     cur.close()
     connection.close()

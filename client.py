@@ -15,11 +15,12 @@ from termcolor import colored
 import base64,zlib
 import multiprocessing
 import climage
+from PIL import Image
 
 # datetime.datetime.strptime(time.ctime(), "%c")
 
 # basic variables
-buffer = 4194304
+buffer = 65536
 
 # pub_keys={}
 username = ""
@@ -168,8 +169,10 @@ def recv_message(private_key):
                     decodeit = open(address, 'wb')
                     decodeit.write(base64.b64decode((image_str)))
                     decodeit.close()
-                    output = climage.convert(address)
-                    print(output)
+                    #output = climage.convert(address)
+                    img = Image.open(address)
+                    img.show()
+                    # print(output)
                 elif(message.type == 'group_image'):
                     print(f"Image received from {message.sender} on group {message.group_name}")
                     address = "newimage.jpeg"
@@ -177,8 +180,10 @@ def recv_message(private_key):
                     decodeit = open(address, 'wb')
                     decodeit.write(base64.b64decode((image_str)))
                     decodeit.close()
-                    output = climage.convert(address)
-                    print(output)
+                    # output = climage.convert(address)
+                    img = Image.open(address)
+                    img.show()
+                    # print(output)
                 if(message.type == 'group'):
                     group_name = message.group_name
                     if message.msg == 'admin':
@@ -203,12 +208,22 @@ def recv_message(private_key):
                             else:
                                 print(f"{member} could not be added to the group")
                         show_admin_commands()
-                    elif message == 'failed_create_table':
+                    elif message.msg == 'failed_create_table':
                         print(f"Failed to create {group_name}")
                         # all add msgs
                     elif message.msg == 'added_successfully':
                         member  = input("Enter name of the member to add: ")
                         data = pickle.dumps(msg('group',username,member,'add',group_name))
+                        s.sendto(data, (host, port))
+                        conf = s.recv(buffer)
+                        message = pickle.loads(conf).msg
+                        if message == 'success':
+                            print(f"{member} has been added to the group {group_name}")
+                        else:
+                            print(f"{member} could not be added {group_name}")
+                    elif message.msg == 'made_admin':
+                        member  = input("Enter name of the member to make admin: ")
+                        data = pickle.dumps(msg('group',username,member,'admin',group_name))
                         s.sendto(data, (host, port))
                         conf = s.recv(buffer)
                         message = pickle.loads(conf).msg
@@ -229,9 +244,6 @@ def recv_message(private_key):
                     elif message.msg == 'failed_kicking':
                         print(f"Failed to kick {message.sender} from {group_name}")
                     elif message.msg == 'group_deleted':
-                        # conf = s.recv(buffer)
-                        # message = pickle.loads(conf).msg
-                        # if message == 'success':
                         print(f"{group_name} has been deleted")
                     elif message.msg == 'failed_deleting_group':
                         print(f"Failed to delete {group_name}")
@@ -431,8 +443,8 @@ def main():
                         decodeit = open(address, 'wb')
                         decodeit.write(base64.b64decode((image_str)))
                         decodeit.close()
-                        output = climage.convert(address)
-                        print(output)
+                        # output = climage.convert(address)
+                        # print(output)
                     elif row[3] == 'group_image':
                         print(f"Image received from {row[0]} on group {row[5]}")
                         address = "newimage.jpeg"
@@ -440,8 +452,10 @@ def main():
                         decodeit = open(address, 'wb')
                         decodeit.write(base64.b64decode((image_str)))
                         decodeit.close()
-                        output = climage.convert(address)
-                        print(output)
+                        # output = climage.convert(address)
+                        # print(output)
+                        img = Image.open(address)
+                        img.show()
                     else:
                         if row[0] != 'server':
                             show_message(row[0],decrypt_blob(row[2],private_key))
@@ -469,8 +483,10 @@ def main():
                         decodeit = open(address, 'wb')
                         decodeit.write(base64.b64decode((image_str)))
                         decodeit.close()
-                        output = climage.convert(address)
-                        print(output)
+                        # output = climage.convert(address)
+                        # print(output)
+                        img = Image.open(address)
+                        img.show()
                     elif row[3] == 'group_image':
                         print(f"Image received from {row[0]} on group {row[5]}")
                         address = "newimage.jpeg"
@@ -478,13 +494,16 @@ def main():
                         decodeit = open(address, 'wb')
                         decodeit.write(base64.b64decode((image_str)))
                         decodeit.close()
-                        output = climage.convert(address)
-                        print(output)
+                        # output = climage.convert(address)
+                        # print(output)
+                        img = Image.open(address)
+                        img.show()
                     else:
                         if row[0] != 'server':
                             show_message(row[0],decrypt_blob(row[2],private_key))
                         else:
                             show_message(row[0],row[2])
+                    insert_to_read_db(messages_db_path,row[0],row[1],row[2],row[3],row[4],row[5])
             elif(chat == "\\kick"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group',username,'server','kick',grp))
@@ -506,7 +525,10 @@ def main():
                 s.sendto(data, (host, port))
                 change_in_thread()
             elif(chat == "\\make_admin"):
-                pass
+                grp = input("Enter name of the group: ")
+                data = pickle.dumps(msg('group',username,'server','make_admin',grp))
+                s.sendto(data, (host, port))
+                change_in_thread()
         else:
             chat = f"{chat} " + colored(ctime(),'blue')
             send_message(chat)
