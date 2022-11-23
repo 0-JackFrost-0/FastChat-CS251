@@ -42,16 +42,16 @@ def view_online(path):
 def create_table(path):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
-    query = '''CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY,salt TEXT,password TEXT, status TEXT, port INT, pub_key TEXT, priv_key TEXT)'''
+    query = '''CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY,salt TEXT,password TEXT, status TEXT, port INT, pub_key TEXT)'''
     cur.execute(query)
     connection.commit()
     cur.close()
     connection.close()
 
-def insert_to_db(cur,username,salt, password, status, port, pub_key, priv_key):
+def insert_to_db(cur,username,salt, password, status, port, pub_key):
     try:
-        query = '''INSERT INTO users VALUES(?,?,?,?,?,?,?)'''
-        cur.execute(query,(username,salt,password,status, port, pub_key, priv_key))
+        query = '''INSERT INTO users VALUES(?,?,?,?,?,?)'''
+        cur.execute(query,(username,salt,password,status, port, pub_key))
         print(f"Successfully created user {username}")
         return True
     except:
@@ -73,7 +73,7 @@ def check_username(username,path):
     # else:
     #     return False
     
-def store_new_info(path, username, salt,password, status, port, pub_key, priv_key):
+def store_new_info(path, username, salt,password, status, port, pub_key):
     #return True if success register
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -84,7 +84,7 @@ def store_new_info(path, username, salt,password, status, port, pub_key, priv_ke
         connection.close()
         return False
     else:
-        if insert_to_db(cur,username, salt,password,status, port, pub_key, priv_key):
+        if insert_to_db(cur,username, salt,password,status, port, pub_key):
             # print("working properly")
             cur.close()
             connection.commit()
@@ -127,20 +127,6 @@ def get_pubkey(path, username):
     cur = connection.cursor()
     try:
         key = cur.execute("SELECT pub_key FROM USERS WHERE username=?", (username,)).fetchall()
-        cur.close()
-        connection.close()
-        # print(key[0][0])
-        return key[0][0]
-    except:
-        cur.close()
-        connection.close()
-        return b"-1"
-
-def get_privkey(path, username):
-    connection = sqlite3.connect(path)
-    cur = connection.cursor()
-    try:
-        key = cur.execute("SELECT priv_key FROM USERS WHERE username=?", (username,)).fetchall()
         cur.close()
         connection.close()
         # print(key[0][0])

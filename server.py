@@ -206,8 +206,7 @@ while True:
         # Hashing the password
         hashed = bcrypt.hashpw(password, salt)
         pubkey = server_sock.recv(BUFSIZE)
-        privkey = server_sock.recv(BUFSIZE)
-        state = store_new_info(user_info_db_path, username, salt,hashed,'ONLINE', addr[1], pubkey, privkey)
+        state = store_new_info(user_info_db_path, username, salt,hashed,'ONLINE', addr[1], pubkey)
         if(state):
             package = pickle.dumps(msg('register', 'server', 'unknown','success'))
             server_sock.sendto(package, addr)

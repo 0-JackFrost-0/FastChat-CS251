@@ -334,9 +334,12 @@ def login():
             s.sendto(data, (host, port))
             public_key,private_key = rsa.newkeys(1024)
             mesg1 = public_key.save_pkcs1("PEM")
-            mesg2 = private_key.save_pkcs1("PEM")
+            priv_key = private_key.save_pkcs1("PEM")
+            addr = f"{username}_priv.txt"
+            file = open(addr,'wb')
+            file.write(priv_key)
             s.sendto(mesg1, (host, port))
-            s.sendto(mesg2, (host, port))
+            # s.sendto(mesg2, (host, port))
             conf = s.recv(buffer)
             message = pickle.loads(conf).msg
             if message == 'success':
@@ -365,13 +368,18 @@ def show_admin_commands():
     print(colored("- \\make_admin - To make another member an admin", 'cyan'))
     return
 
+def get_privkey(username):
+    address = f"{username}_priv.txt"
+    file = open(address,'rb')
+    priv_key = file.read()
+    return priv_key
+
 # Main function, runs the whole Command Line GUI thingy, will decompose code further
 def main():
     opt = login()
     show_welcome_message()
     public_key = rsa.PublicKey.load_pkcs1(get_pubkey(user_info_db_path, username))
-    private_key = rsa.PrivateKey.load_pkcs1(get_privkey(user_info_db_path, username))
-    # public_key,private_key = rsa.newkeys(1024)
+    private_key = rsa.PrivateKey.load_pkcs1(get_privkey(username))
     message = public_key.save_pkcs1("PEM").decode()
     data = pickle.dumps(msg('connect',username,'server',message))
     s.sendto(data, (host, port))
