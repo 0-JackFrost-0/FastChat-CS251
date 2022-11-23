@@ -2,6 +2,7 @@ import socket
 from user_info import *
 from groups import *
 from time import ctime, sleep
+import datetime
 import sys
 import pickle
 from msg import *
@@ -14,6 +15,7 @@ import bcrypt
 # initializing database path, not required with postgresql
 user_info_db_path = "databases/userInfo.db"
 group_info_db_path ="databases/groups.db"
+messages_db_path = "databases/messages.db"
 
 # signin stuff
 if len(sys.argv)==3:
@@ -46,7 +48,6 @@ create_table(user_info_db_path)
 while True:
     try:
         data, addr = server_sock.recvfrom(BUFSIZE)
-        # print(addr)
     except:
         print('a connection closed')
         break
@@ -58,38 +59,30 @@ while True:
     receiver = message.receiver
     msg_ = message.msg
     grp = message.group_name
-    # print(sender,msg_,msgtype)
     if msgtype == 'connect':
-        # if addr not in AD.values():
-        # if not isPortinTable(user_info_db_path, addr[1]):
-        # if check_status(user_info_db_path, sender) == "OFFLINE":
-            # pub_keys[sender] = msg_
-            # for name, address in AD.items():
-            #     package = pickle.dumps(msg('key', sender, name,msg_))
-            #     server_sock.sendto(package, address)
-            # AD[sender] = addr
-            # for name, pubkey in pub_keys.items():
-            #     if name == sender:
-            #         continue
-            
-            #     server_sock.sendto(package, addr)
             message = f"{sender} has entered the chat "
-            # for name, address in AD.items():
             change_status_online(sender, user_info_db_path)
-            # print(get_all_active_ports(user_info_db_path))
             for name, port in get_all_active_ports(user_info_db_path):
                 if name != sender:
-                    package = pickle.dumps(msg('receive', 'server', name,message))
-                    server_sock.sendto(package, (LOCAL, port))
+                    if check_username_online(user_info_db_path,name):
+                        package = pickle.dumps(msg('receive', 'server', name,message))
+                        server_sock.sendto(package, (LOCAL, port))
+                        insert_to_read_db(messages_db_path,'server',name,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
+                    else:
+                        insert_to_unread_db(messages_db_path,'server',name,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
     elif msgtype == 'receive':
-        # if(receiver in AD):
-        print(check_username(receiver, user_info_db_path))
         if check_username(receiver, user_info_db_path):
-            print(get_port(user_info_db_path, receiver))
-            server_sock.sendto(data, ('localhost', get_port(user_info_db_path, receiver)))
+            if check_username_online(user_info_db_path,receiver):
+                server_sock.sendto(data, ('localhost', get_port(user_info_db_path, receiver)))
+                insert_to_read_db(messages_db_path,sender,receiver,msg_,msgtype,datetime.datetime.strptime(ctime(), "%c"),grp)
+            else:
+                message = f"{receiver} is offline but message has been stored"
+                package = pickle.dumps(msg('receive','server', sender,message))
+                server_sock.sendto(package, addr)
+                insert_to_unread_db(messages_db_path,sender,receiver,msg_,msgtype,datetime.datetime.strptime(ctime(), "%c"),grp)
         else:
             message = f"{receiver} does not exist"
-            package = pickle.dumps(msg('recieve','server', sender,message))
+            package = pickle.dumps(msg('receive','server', sender,message))
             server_sock.sendto(package, addr)
     elif msgtype == 'group':
         if msg_ == "create":
@@ -99,10 +92,15 @@ while True:
                 while addmem.msg != 'exit':
                     if add_member(group_info_db_path, addmem.group_name, addmem.receiver):
                         server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'success', grp)), addr)
-                        message = f"You have been added to the group {addmem.group_name}"
-                        package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
-                        # server_sock.sendto(package, AD[addmem.receiver])
-                        server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
+                        if check_username_online(user_info_db_path,addmem.receiver):
+                            message = f"You have been added to the group {addmem.group_name}"
+                            package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
+                            # server_sock.sendto(package, AD[addmem.receiver])
+                            server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
+                            insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
+                        else:
+                            message = f"You have been added to the group {addmem.group_name}"
+                            insert_to_unread_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
                     addmem = pickle.loads(server_sock.recv(BUFSIZE))
             else:
                 server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'failed_create_table', grp)), addr)
@@ -114,10 +112,15 @@ while True:
                 if add_member(group_info_db_path, addmem.group_name, addmem.receiver):
                     server_sock.sendto(pickle.dumps(msg('group', addmem.receiver, sender, 'success', grp)), addr)
                     server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'success', grp)), addr)
-                    message = f"You have been added to the group {addmem.group_name}"
-                    package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
-                    # server_sock.sendto(package, AD[addmem.receiver])
-                    server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
+                    if check_username_online(user_info_db_path,addmem.receiver):
+                        message = f"You have been added to the group {addmem.group_name}"
+                        package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
+                        # server_sock.sendto(package, AD[addmem.receiver])
+                        server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
+                        insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
+                    else:
+                        message = f"You have been added to the group {addmem.group_name}"
+                        insert_to_unread_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
                 else:
                     server_sock.sendto(pickle.dumps(msg('group', addmem.receiver, sender, 'failed_adding', grp)), addr)
             else:
@@ -126,9 +129,20 @@ while True:
             if check_admin(group_info_db_path, grp, sender):
                 drop_table(group_info_db_path, grp)
                 server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'group_deleted', grp)), addr)
+                members = view_all_members(group_info_db_path, grp)
+                for member in members:
+                    if member[0] != sender:
+                        if check_username_online(user_info_db_path,member[0]):
+                            message = f"The group {grp} has been deleted by {sender}"
+                            package = pickle.dumps(msg('receive', 'server', member[0],message))
+                            # server_sock.sendto(package, AD[delmem.receiver])
+                            server_sock.sendto(package, (LOCAL, get_port(user_info_db_path,member[0])))
+                            insert_to_read_db(messages_db_path,'server',member[0],message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
+                        else:
+                            message = f"The group {grp} has been deleted by {sender}"
+                            insert_to_read_db(messages_db_path,'server',member[0],message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
             else:
                 server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'failed_deleting_group', grp)), addr)
-
         elif msg_ == "kick":
             if check_admin(group_info_db_path, grp, sender):
                 server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'kicked_successfully', grp)), addr)
@@ -137,30 +151,38 @@ while True:
                 if delete_member(group_info_db_path, grp, delmem.receiver):
                     server_sock.sendto(pickle.dumps(msg('group', delmem.receiver, sender, 'success', grp)), addr)
                     server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'success', grp)), addr)
-                    message = f"You have been kicked from the group {delmem.group_name} by {delmem.sender}"
-                    package = pickle.dumps(msg('receive', 'server', delmem.receiver,message))
-                    # server_sock.sendto(package, AD[delmem.receiver])
-                    server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, delmem.receiver)))
+                    if check_username_online(user_info_db_path,delmem.receiver):
+                        message = f"You have been kicked from the group {delmem.group_name} by {delmem.sender}"
+                        package = pickle.dumps(msg('receive', 'server', delmem.receiver,message))
+                        # server_sock.sendto(package, AD[delmem.receiver])
+                        server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, delmem.receiver)))
+                        insert_to_read_db(messages_db_path,'server',delmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
+                    else:
+                        message = f"You have been kicked from the group {delmem.group_name} by {delmem.sender}"
+                        insert_to_unread_db(messages_db_path,'server',delmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),grp)
                 else:
                     server_sock.sendto(pickle.dumps(msg('group', delmem.receiver, sender, 'failed_kicking', grp)), addr)
             else:
                 server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'not_admin', grp)), addr)
         else:
-            # if(receiver in AD):
-            # print("reached here")
             if check_username(receiver, user_info_db_path):
-                # print("didn't reach here")
-                # server_sock.sendto(data, AD[receiver])
-                server_sock.sendto(data, (LOCAL, get_port(user_info_db_path, receiver)))
+                if check_username_online(user_info_db_path,receiver):
+                    server_sock.sendto(data, ('localhost', get_port(user_info_db_path, receiver)))
+                    insert_to_read_db(messages_db_path,sender,receiver,msg_,msgtype,datetime.datetime.strptime(ctime(), "%c"),grp)
+                else:
+                    message = f"{receiver} is offline but message has been stored"
+                    package = pickle.dumps(msg('receive','server', sender,message))
+                    server_sock.sendto(package, addr)
+                    insert_to_unread_db(messages_db_path,sender,receiver,msg_,msgtype,datetime.datetime.strptime(ctime(), "%c"),grp)
             else:
                 message = f"{receiver} does not exist"
-                package = pickle.dumps(msg('recieve','server', sender,message))
+                package = pickle.dumps(msg('receive','server', sender,message))
                 server_sock.sendto(package, addr)
             ## MOST PROBABLY UNNECESSARY PIECE OF CODE
             #send_to()
         # else:
         #     message = f"{receiver} does not exist"
-        #     package = pickle.dumps(msg('recieve','server', sender,message))
+        #     package = pickle.dumps(msg('receive','server', sender,message))
         #     server_sock.sendto(package, addr)
     elif msgtype == 'disconnect':
         # if(sender in AD):
@@ -174,7 +196,7 @@ while True:
             change_status_offline(sender,user_info_db_path)
         else:
             message = f"{receiver} does not exist"
-            package = pickle.dumps(msg('recieve','server', sender,message))
+            package = pickle.dumps(msg('receive','server', sender,message))
             server_sock.sendto(package, addr)
     elif msgtype == 'register':
         username, password = (msg_).split(' ', 1)
@@ -185,7 +207,6 @@ while True:
         hashed = bcrypt.hashpw(password, salt)
         pubkey = server_sock.recv(BUFSIZE)
         privkey = server_sock.recv(BUFSIZE)
-        # print(port, sender)
         state = store_new_info(user_info_db_path, username, salt,hashed,'ONLINE', addr[1], pubkey, privkey)
         if(state):
             package = pickle.dumps(msg('register', 'server', 'unknown','success'))
@@ -206,12 +227,19 @@ while True:
             package = pickle.dumps(msg('login', 'server', 'unknown', 'fail'))
             server_sock.sendto(package, addr)
     else:
-        # if(receiver in AD):
         if check_username(receiver, user_info_db_path):
-            # server_sock.sendto(data, AD[receiver])
-            server_sock.sendto(data, (LOCAL, get_port(user_info_db_path, receiver)))
+            if check_username_online(user_info_db_path,receiver):
+                server_sock.sendto(data, ('localhost', get_port(user_info_db_path, receiver)))
+                insert_to_read_db(messages_db_path,sender,receiver,msg_,msgtype,datetime.datetime.strptime(ctime(), "%c"),grp)
+            else:
+                message = f"{receiver} is offline but message has been stored"
+                package = pickle.dumps(msg('receive','server', sender,message))
+                server_sock.sendto(package, addr)
+                insert_to_unread_db(messages_db_path,sender,receiver,msg_,msgtype,datetime.datetime.strptime(ctime(), "%c"),grp)
         else:
-            server_sock.sendto(message, addr)
+            message = f"{receiver} does not exist"
+            package = pickle.dumps(msg('receive','server', sender,message))
+            server_sock.sendto(package, addr)
 
 
 server_sock.close()

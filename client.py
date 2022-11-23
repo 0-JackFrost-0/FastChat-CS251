@@ -1,4 +1,5 @@
 from user_info import *
+from messages import *
 from groups import *
 import sys
 import socket, select
@@ -24,6 +25,7 @@ buffer = 4194304
 username = ""
 user_info_db_path = "databases/userInfo.db"
 group_db_path = "databases/groups.db"
+messages_db_path = "databases/messages.db"
 
 # utilising command line arguments, throws error if not passed correctly.
 if len(sys.argv)==3:
@@ -38,19 +40,15 @@ load_balance_addr = (host,port)
 # initialising the socket, throws error if not connected
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 try :
-    # s.connect(load_balance_addr)
-    # print("connected to", load_balance_addr)
     welcm_msg = str(port)
     s.sendto(pickle.dumps(welcm_msg), load_balance_addr)
 except :
-    print("\33[31m\33[1m Can't connect to the load balancing server \33[0m")
+    print(colored("Can't connect to the load balancing server",'red'))
     sys.exit()
 
 port = int(pickle.loads(s.recv(buffer)))
 try :
     pass
-    # print("connected to", port)
-    # s.connect((host, port))
 except:
     print("\33[31m\33[1m Can't connect to the server \33[0m")
     sys.exit()
@@ -138,19 +136,16 @@ def change_in_thread():
         in_thread = True
     lock.release()
 
-# Function that recieves the message from the server
+# Function that receives the message from the server
 def recv_message(private_key):
-        # print("recving")
         while True:
             msg_, addr = s.recvfrom(buffer)
-            # print(pickle.loads(msg_).msg)
             if not msg_:
                 sys.exit(0)
                 # return
             if len(msg_) != 0:
                 message = pickle.loads(msg_)
                 if(message.type == 'receive'):
-                    # print(message.msg)
                     if message.sender != 'server':
                         decrypted_msg = decrypt_blob(message.msg,private_key)
                         show_message(message.sender,decrypted_msg)
@@ -167,7 +162,6 @@ def recv_message(private_key):
                     # pub_keys.pop(message.sender)
                     pass
                 elif(message.type == 'image'):
-                    # change_in_thread()
                     print(f"Image received from {message.sender}")
                     address = "newimage.jpeg"
                     image_str = decrypt_blob(message.msg,private_key)
@@ -176,9 +170,7 @@ def recv_message(private_key):
                     decodeit.close()
                     output = climage.convert(address)
                     print(output)
-                    # change_in_thread()
                 elif(message.type == 'group_image'):
-                    #change_in_thread()
                     print(f"Image received from {message.sender} on group {message.group_name}")
                     address = "newimage.jpeg"
                     image_str = decrypt_blob(message.msg,private_key)
@@ -187,7 +179,6 @@ def recv_message(private_key):
                     decodeit.close()
                     output = climage.convert(address)
                     print(output)
-                    #change_in_thread()
                 if(message.type == 'group'):
                     group_name = message.group_name
                     if message.msg == 'admin':
@@ -270,13 +261,11 @@ def send_message(message):
         elif grp_or_ind == "g":
             in_grp = False
             grp_name = input("Which group to send message?: ")
-
             members = view_all_members(group_db_path, grp_name)
             for member in members:
                 if member[0] == username:
                     in_grp = True
             if in_grp:
-            # for r_name in pub_keys:
                 for r_name in members:
                     if r_name[0] != username:
                     # public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
@@ -306,13 +295,17 @@ def send_image(address):
         elif grp_or_ind == "g":
             grp_name = input("Which group to send message?: ")
             members = view_all_members(group_db_path, grp_name)
-            # for r_name in pub_keys:
-            for r_name in members:
-                # public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
-                public_partner = rsa.PublicKey.load_pkcs1(get_pubkey(user_info_db_path, r_name[0]))
-                message_ = encrypt_blob(image_str.decode(),public_partner)
-                package = pickle.dumps(msg('group_image', username, r_name[0], message_.decode(),grp_name))
-                s.sendto(package, (host, port))
+            in_grp = False
+            for member in members:
+                if member[0] == username:
+                    in_grp = True
+            if in_grp:
+                for r_name in members:
+                    if r_name[0] != username:
+                        public_partner = rsa.PublicKey.load_pkcs1(get_pubkey(user_info_db_path, r_name[0]))
+                        message_ = encrypt_blob(image_str.decode(),public_partner)
+                        package = pickle.dumps(msg('group_image', username, r_name[0], message_.decode(),grp_name))
+                        s.sendto(package, (host, port))
 
 def login():
     global username
@@ -360,6 +353,8 @@ def show_welcome_message():
     print(colored("3) \\groups - view all groups that you are currently a part of", 'green'))
     print(colored("4) \\create - create a new group", 'green'))
     print(colored("5) \\image - send images", 'green'))
+    print(colored("6) \\read - displays upto last 10 read messages", 'green'))
+    print(colored("7) \\unread - displays upto last 10 unread messages", 'green'))
     return
 
 def show_admin_commands():
@@ -367,6 +362,7 @@ def show_admin_commands():
     print(colored("- \\add - Add a new user to the group", 'cyan'))
     print(colored("- \\kick - Remove a user from a group", 'cyan'))
     print(colored("- \\delgrp - Deletes the group", 'cyan'))
+    print(colored("- \\make_admin - To make another member an admin", 'cyan'))
     return
 
 # Main function, runs the whole Command Line GUI thingy, will decompose code further
@@ -405,6 +401,82 @@ def main():
             elif(chat == '\\image'):
                 address = input("Enter the address of the image: ")
                 send_image(address)
+            elif chat == "\\read":
+                msg_list = return_all_read_messages(messages_db_path,username)
+                if len(msg_list) == 0:
+                    print("No read messages")
+                for row in msg_list:
+                    if row[3] == 'group':
+                        if row[0] != 'server':
+                            show_group_message(row[5],row[0],decrypt_blob(row[2],private_key))
+                        else:
+                            show_group_message(row[5],row[0],row[2])
+                    elif row[3] == 'receive':
+                        if row[0] != 'server':
+                            show_message(row[0],decrypt_blob(row[2],private_key))
+                        else:
+                            show_message(row[0],row[2])
+                    elif row[3] == 'image':
+                        print(f"Image received from {row[0]}")
+                        address = "newimage.jpeg"
+                        image_str = decrypt_blob(row[2],private_key)
+                        decodeit = open(address, 'wb')
+                        decodeit.write(base64.b64decode((image_str)))
+                        decodeit.close()
+                        output = climage.convert(address)
+                        print(output)
+                    elif row[3] == 'group_image':
+                        print(f"Image received from {row[0]} on group {row[5]}")
+                        address = "newimage.jpeg"
+                        image_str = decrypt_blob(row[2],private_key)
+                        decodeit = open(address, 'wb')
+                        decodeit.write(base64.b64decode((image_str)))
+                        decodeit.close()
+                        output = climage.convert(address)
+                        print(output)
+                    else:
+                        if row[0] != 'server':
+                            show_message(row[0],decrypt_blob(row[2],private_key))
+                        else:
+                            show_message(row[0],row[2])
+            elif chat == "\\unread":
+                msg_list = return_all_unread_messages(messages_db_path,username)
+                if len(msg_list) == 0:
+                    print("No unread messages")
+                for row in msg_list:
+                    if row[3] == 'group':
+                        if row[0] != 'server':
+                            show_group_message(row[5],row[0],decrypt_blob(row[2],private_key))
+                        else:
+                            show_group_message(row[5],row[0],row[2])
+                    elif row[3] == 'receive':
+                        if row[0] != 'server':
+                            show_message(row[0],decrypt_blob(row[2],private_key))
+                        else:
+                            show_message(row[0],row[2])
+                    elif row[3] == 'image':
+                        print(f"Image received from {row[0]}")
+                        address = "newimage.jpeg"
+                        image_str = decrypt_blob(row[2],private_key)
+                        decodeit = open(address, 'wb')
+                        decodeit.write(base64.b64decode((image_str)))
+                        decodeit.close()
+                        output = climage.convert(address)
+                        print(output)
+                    elif row[3] == 'group_image':
+                        print(f"Image received from {row[0]} on group {row[5]}")
+                        address = "newimage.jpeg"
+                        image_str = decrypt_blob(row[2],private_key)
+                        decodeit = open(address, 'wb')
+                        decodeit.write(base64.b64decode((image_str)))
+                        decodeit.close()
+                        output = climage.convert(address)
+                        print(output)
+                    else:
+                        if row[0] != 'server':
+                            show_message(row[0],decrypt_blob(row[2],private_key))
+                        else:
+                            show_message(row[0],row[2])
             elif(chat == "\\kick"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group',username,'server','kick',grp))
@@ -425,6 +497,8 @@ def main():
                 data = pickle.dumps(msg('group',username,'server','create',grp))
                 s.sendto(data, (host, port))
                 change_in_thread()
+            elif(chat == "\\make_admin"):
+                pass
         else:
             chat = f"{chat} " + colored(ctime(),'blue')
             send_message(chat)

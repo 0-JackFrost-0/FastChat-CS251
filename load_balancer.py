@@ -4,6 +4,11 @@ import select
 import random
 from itertools import cycle
 import pickle
+from messages import *
+
+messages_db_path = "databases/messages.db"
+create_read_table(messages_db_path)
+create_unread_table(messages_db_path)
 
 SERVER_POOL = [('localhost', 5000), ('localhost', 5001)]
 
