@@ -18,18 +18,17 @@ import base64
 from PIL import Image
 import subprocess
 
-# datetime.datetime.strptime(time.ctime(), "%c")
+
 
 # basic variables
 buffer = 4194304
-
-# pub_keys={}
 username = ""
+# path to database
 user_info_db_path = "databases/userInfo.db"
 group_db_path = "databases/groups.db"
 messages_db_path = "databases/messages.db"
 
-# utilising command line arguments, throws error if not passed correctly.
+
 if len(sys.argv) == 3:
     host = sys.argv[1]
     port = int(sys.argv[2])
@@ -39,8 +38,7 @@ else:
 
 load_balance_addr = (host, port)
 
-
-# initialising the socket, throws error if not connected
+# Connecting to the load balancing server, to get the port to a server
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 try:
     welcm_msg = str(port)
@@ -49,6 +47,7 @@ except:
     print(colored("Can't connect to the load balancing server", 'red'))
     sys.exit()
 
+# finding the port of the server, to establish communication
 port = int(pickle.loads(s.recv(buffer)))
 try:
     pass
@@ -56,6 +55,7 @@ except:
     print("\33[31m\33[1m Can't connect to the server \33[0m")
     sys.exit()
 
+# Initialising 
 ncryptr = AESEncryptor(os.urandom(16))
 
 def show_message(sender, msg):
@@ -100,7 +100,7 @@ in_thread = False
 
 
 def change_in_thread():
-    """Used to reverse the in_thread
+    """Used to lock one of the threads during execution, avoids the entangling of threads
     """
     global in_thread
     lock.acquire()
@@ -110,11 +110,11 @@ def change_in_thread():
         in_thread = True
     lock.release()
 
-# Function that receives the message from the server
-
-
+# Function that receives the messages from the server, and takes appropriate action
 def recv_message(private_key):
-    """Encrypted messages sent by server are recieved and decrypted and finally displayed on the screen
+    """Encrypted messages sent by server are recieved and decrypted and finally displayed on the screen.
+    Receives messages of type "receive", "group", "disconnect", "key", "group", "disconnect", "image"
+    and "group-image". The type receive is for receiving direct messages, the rest are pretty self explanatory
 
     :param private_key: key for decryption
     """
@@ -122,7 +122,6 @@ def recv_message(private_key):
         msg_, addr = s.recvfrom(buffer)
         if not msg_:
             sys.exit(0)
-            # return
         if len(msg_) != 0:
             message = pickle.loads(msg_)
             if (message.type == 'receive'):
@@ -134,20 +133,15 @@ def recv_message(private_key):
                 else:
                     show_message(message.sender, message.msg)
             elif (message.type == 'key'):
-                # Not required as done in database
-                public_partner_key = message.msg
-                # pub_keys[message.sender] = public_partner_key
-            elif (message.type == 'group'):
                 pass
+                # public_partner_key = message.msg
+            # elif (message.type == 'group'):
+            #     pass
             elif (message.type == 'disconnect'):
-                # Not required as done in database
-                # pub_keys.pop(message.sender)
                 pass
             elif (message.type == 'image'):
                 print(f"Image received from {message.sender}")
                 address = "newimage.jpeg"
-                # image_str = decrypt_blob(message.msg, private_key)
-                # print(base64.b64decode(message.aes_key))
                 decryptd_key = rsa.decrypt(base64.b64decode(message.aes_key), private_key)
                 image_str = ncryptr.decrypt(base64.b64decode(message.msg.encode()), decryptd_key)
                 decodeit = open(address, 'wb')
@@ -159,7 +153,6 @@ def recv_message(private_key):
                 print(
                     f"Image received from {message.sender} on group {message.group_name}")
                 address = "newimage.jpeg"
-                # image_str = decrypt_blob(message.msg, private_key)
                 decryptd_key = rsa.decrypt(base64.b64decode(message.aes_key), private_key)
                 image_str = ncryptr.decrypt(base64.b64decode(message.msg.encode()), decryptd_key)
                 decodeit = open(address, 'wb')
@@ -194,7 +187,7 @@ def recv_message(private_key):
                         else:
                             print(f"{member} could not be added to the group")
                     show_admin_commands()
-                elif message == 'failed_create_table':
+                elif message.msg == 'failed_create_table':
                     print(f"Failed to create {group_name}")
                     # all add msgs
                 elif message.msg == 'added_successfully':
@@ -247,9 +240,8 @@ def recv_message(private_key):
                             message.group_name, message.sender, message.msg)
                 change_in_thread()
 
+
 # Function to send the message to the given username
-
-
 def send_message(message):
     """Message given by the user is processed, encrypted and packed and sent to the server
 
@@ -588,6 +580,7 @@ def main():
                             show_message(row[0], decrypted_msg.decode())
                         else:
                             show_message(row[0], row[2])
+                    insert_to_read_db(messages_db_path,row[0],row[1],row[2],row[3],row[4],row[5],row[6])
             elif (chat == "\\kick"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group', username, 'server', 'kick', grp))

@@ -1,6 +1,11 @@
 import sqlite3
 
 def create_unread_table(path):
+    """_summary_
+
+    :param path: _description_
+    :type path: _type_
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     query = '''CREATE TABLE IF NOT EXISTS UNREAD(sender TEXT,receiver TEXT,message TEXT, type TEXT,time DATETIME,aes_key TEXT,grpname TEXT DEFAULT NULL)'''
@@ -10,6 +15,27 @@ def create_unread_table(path):
     connection.close()
 
 def insert_to_unread_db(path,sender,receiver,message,type,datetime,aes_key,grp):
+    """Insert new entries in the unread table
+
+    :param path: Path of the messages database
+    :type path: str
+    :param sender: Sender of the message
+    :type sender: str
+    :param receiver: Receiver of the message
+    :type receiver: str
+    :param message: The actual message sent
+    :type message: str
+    :param type: The type of the messsage sent
+    :type type: str
+    :param datetime: The date and time when the message was sent
+    :type datetime: str
+    :param aes_key:  The encrypted AES key to be stored for decrypting the message
+    :type aes_key: binary
+    :param grp: Gives the grp_name in which the message was shared, otherwise gives None if Direct message
+    :type grp: str
+    :return: Returns True if inserted successfully, else returns False
+    :rtype: bool
+    """
     try:
         connection = sqlite3.connect(path)
         cur = connection.cursor()
@@ -38,6 +64,15 @@ def insert_to_unread_db(path,sender,receiver,message,type,datetime,aes_key,grp):
         return False
     
 def return_all_unread_messages(path,name):
+    """Returns the last 10 unread messages of the user
+
+    :param path: Path of the messages database
+    :type path: str
+    :param name: The name of the user to find the unread messages of
+    :type name: str
+    :return: Returns a list of one-element tuples consisting of the unread messages
+    :rtype: list
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute(f"SELECT * from UNREAD WHERE receiver = '{name}' ORDER BY time")
@@ -50,6 +85,11 @@ def return_all_unread_messages(path,name):
 
 
 def create_read_table(path):
+    """Creates a table to store the read messages, if it doesn't exist
+
+    :param path: Path of the messages database
+    :type path: str
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     query = '''CREATE TABLE IF NOT EXISTS READ(sender TEXT,receiver TEXT,message TEXT, type TEXT,time DATETIME,aes_key TEXT,grpname TEXT DEFAULT NULL)'''
@@ -59,6 +99,27 @@ def create_read_table(path):
     connection.close()
 
 def insert_to_read_db(path,sender,receiver,message,type,datetime,aes_key,grp):
+    """Insert new entries in the read table
+
+    :param path: Path of the messages database
+    :type path: str
+    :param sender: Sender of the message
+    :type sender: str
+    :param receiver: Receiver of the message
+    :type receiver: str
+    :param message: The actual message sent
+    :type message: str
+    :param type: The type of the messsage sent
+    :type type: str
+    :param datetime: The date and time when the message was sent
+    :type datetime: str
+    :param aes_key:  The encrypted AES key to be stored for decrypting the message
+    :type aes_key: binary
+    :param grp: Gives the grp_name in which the message was shared, otherwise gives None if Direct message
+    :type grp: str
+    :return: Returns True if inserted successfully, else returns False
+    :rtype: bool
+    """
     try:
         connection = sqlite3.connect(path)
         cur = connection.cursor()
@@ -87,17 +148,29 @@ def insert_to_read_db(path,sender,receiver,message,type,datetime,aes_key,grp):
         return False
     
 def return_all_read_messages(path,name):
+    """Returns the last 10 read messages of the user
+
+    :param path: Path of the messages database
+    :type path: str
+    :param name: The name of the user to find the unread messages of
+    :type name: str
+    :return: Returns a list of one-element tuples consisting of the read messages
+    :rtype: list
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute(f"SELECT * from READ WHERE receiver = '{name}' ORDER BY time")
     messages = cur.fetchall()
-    # cur.execute(f"DELETE FROM READ WHERE receiver = '{name}'")
-    # connection.commit()
     cur.close()
     connection.close()
     return messages
 
 def clear_msgs(path):
+    """Clears all read and unread messages from the tables
+
+    :param path: Path of the messages database
+    :type path: str
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute("DELETE FROM UNREAD")

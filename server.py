@@ -96,11 +96,11 @@ while True:
                             insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"), aes_key,grp)
                         else:
                             message = f"You have been added to the group {addmem.group_name}"
-                            insert_to_unread_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
+                            insert_to_unread_db(messages_db_path,'group',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
                     addmem = pickle.loads(server_sock.recv(BUFSIZE))
             else:
-                print("reading here")
-                server_sock.sendto(pickle.dumps(msg('receive', 'server', sender, 'failed_create_table', grp)), addr)
+                # print("reading here")
+                server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'failed_create_table', grp)), addr)
         elif msg_ == "add":
             if check_admin(group_info_db_path, grp, sender):
                 server_sock.sendto(pickle.dumps(msg('group', sender, sender, 'added_successfully', grp)), addr)
