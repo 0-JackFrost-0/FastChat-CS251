@@ -39,7 +39,7 @@ def view_online(path):
     cur.close()
     connection.close()
 
-def create_table(path):
+def create_user_table(path):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     query = '''CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY,salt TEXT,password TEXT, status TEXT, port INT, pub_key TEXT)'''
@@ -130,7 +130,10 @@ def get_pubkey(path, username):
         cur.close()
         connection.close()
         # print(key[0][0])
-        return key[0][0]
+        try:
+            return key[0][0]
+        except:
+            return b"-1"
     except:
         cur.close()
         connection.close()
@@ -193,6 +196,14 @@ def update_port(path, username, port):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute(f"UPDATE USERS SET port = {port} WHERE username=?", (username,))
+    connection.commit()
+    cur.close()
+    connection.close()
+
+def set_all_offline(path):
+    connection = sqlite3.connect(path)
+    cur = connection.cursor()
+    cur.execute(f"UPDATE USERS SET status = 'OFFLINE'")
     connection.commit()
     cur.close()
     connection.close()

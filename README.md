@@ -13,9 +13,7 @@ The aim of our project was:
 ---
 ## Running Instructions
 ```python
-python3 load_balancer.py
-python3 server.py 127.0.0.1 <port>
-# this code will be run for as many servers as entered in the load balancer script
+python3 load_balancer.py <num_servers> <port>
 python3 client.py 127.0.0.1 <load_balancer_port>
 # this code will be run for as many users there are
 ```

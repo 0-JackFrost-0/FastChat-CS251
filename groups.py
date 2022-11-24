@@ -1,6 +1,5 @@
 import sqlite3
 
-
 def create_grp_table(path,grpname,username):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -37,8 +36,6 @@ def view_all_members(path,grpname):
     cur = connection.cursor()
     cur.execute(f"SELECT usernames from {grpname}")
     user_info = cur.fetchall()
-    # for i in user_info:
-    #     print(f"{i[0]}")
     cur.close()
     connection.close()
     return user_info
@@ -72,19 +69,14 @@ def check_admin(path,grpname,username):
     try:
         cur.execute(f"SELECT admin from {grpname} WHERE usernames = '{username}'")
         a = cur.fetchall()
-        # print(a)
         if len(a) == 0:
             return False
-        # print(a[0][0])
         if a[0][0] == 1:
             return True
         else:
             return False
     except Exception as e:
         print(e)
-        # print(cur.execute(f"SELECT usernames from {grpname}").fetchall())
-        # print("Error checking admin")
-    # print(username)
     return False
 
 def delete_member(path,grpname,username):
@@ -101,7 +93,6 @@ def delete_member(path,grpname,username):
 
 ## TODO
 ## Make this function work, with only current visible
-## I hab made new function, hopefully it works XD
 def view_all_groups(path, username):
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -120,3 +111,4 @@ def in_grp(path, grpname, username):
         return False
     else:
         return True
+
