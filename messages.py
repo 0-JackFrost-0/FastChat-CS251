@@ -74,7 +74,7 @@ def insert_to_read_db(path,sender,receiver,message,type,datetime,aes_key,grp):
         else:
             mintime = cur.execute(f"SELECT MIN(time) FROM READ where receiver = '{receiver}'").fetchall()[0][0]
             cur.execute(f"DELETE FROM READ WHERE time= '{mintime}' ")
-            query = '''INSERT INTO READ VALUES(?,?,?,?,?,?)'''
+            query = '''INSERT INTO READ VALUES(?,?,?,?,?,?,?)'''
             cur.execute(query,(sender,receiver, message,type,datetime,aes_key,grp))
             print(f"Successfully stored the message for {receiver}")
             connection.commit()

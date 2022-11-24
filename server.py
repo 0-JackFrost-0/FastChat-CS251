@@ -59,12 +59,12 @@ while True:
             change_status_online(sender, user_info_db_path)
             for name, port in get_all_active_ports(user_info_db_path):
                 if name != sender:
-                    if check_username_online(user_info_db_path,name):
+                    # if check_username_online(user_info_db_path,name):
                         package = pickle.dumps(msg('receive', 'server', name,message))
                         server_sock.sendto(package, (LOCAL, port))
-                        insert_to_read_db(messages_db_path,'server',name,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
-                    else:
-                        insert_to_unread_db(messages_db_path,'server',name,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
+                        # insert_to_read_db(messages_db_path,'server',name,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
+                    # else:
+                        # insert_to_unread_db(messages_db_path,'server',name,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
     elif msgtype == 'receive':
         if check_username(receiver, user_info_db_path):
             if check_username_online(user_info_db_path,receiver):
@@ -93,7 +93,7 @@ while True:
                             package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
                             # server_sock.sendto(package, AD[addmem.receiver])
                             server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
-                            insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
+                            insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"), aes_key,grp)
                         else:
                             message = f"You have been added to the group {addmem.group_name}"
                             insert_to_unread_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
@@ -177,6 +177,23 @@ while True:
                     server_sock.sendto(pickle.dumps(msg('group', delmem.receiver, sender, 'failed_kicking', grp)), addr)
             else:
                 server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'not_admin', grp)), addr)
+        elif msg_ == "make_admin":
+            if check_admin(group_info_db_path, grp, sender):
+                server_sock.sendto(pickle.dumps(msg('group', sender, sender, 'made_admin', grp)), addr)
+                stuff = server_sock.recv(BUFSIZE)
+                addmem = pickle.loads(stuff)
+                if make_admin(group_info_db_path, addmem.group_name, addmem.receiver):
+                    server_sock.sendto(pickle.dumps(msg('group', 'server', sender, 'success', grp)), addr)
+                    if check_username_online(user_info_db_path,addmem.receiver):
+                        message = f"You have been made admin of the group {addmem.group_name} by {addmem.sender}"
+                        package = pickle.dumps(msg('receive', 'server', addmem.receiver,message))
+                        server_sock.sendto(package, (LOCAL, get_port(user_info_db_path, addmem.receiver)))
+                        insert_to_read_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
+                    else:
+                        message = f"You have been made admin of the group {addmem.group_name} by {addmem.sender}"
+                        insert_to_unread_db(messages_db_path,'server',addmem.receiver,message,'receive',datetime.datetime.strptime(ctime(), "%c"),aes_key,grp)
+                else:
+                    server_sock.sendto(pickle.dumps(msg('group', addmem.receiver, sender, 'failed_adding', grp)), addr)
         else:
             if check_username(receiver, user_info_db_path):
                 if check_username_online(user_info_db_path,receiver):

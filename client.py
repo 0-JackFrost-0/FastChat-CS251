@@ -57,78 +57,6 @@ except:
     sys.exit()
 
 ncryptr = AESEncryptor(os.urandom(16))
-# def encrypt_blob(blob, public_partner):
-#     """Function defined by us to encrypt huge blob of data by dividing it into chunks
-
-#     :param blob: data to be encrypted
-#     :type blob: string
-#     :param public_partner: the key for encryption
-#     :return: returns the encrypted message
-#     :rtype: bytes object
-#     """
-#     # In determining the chunk size, determine the private key length used in bytes
-#     # and subtract 42 bytes (when using PKCS1_OAEP). The data will be in encrypted
-#     # in chunks
-#     chunk_size = 86
-#     offset = 0
-#     end_loop = False
-#     encrypted = b""
-
-#     while not end_loop:
-#         # The chunk
-#         chunk = blob[offset:offset + chunk_size]
-
-#         # If the data chunk is less then the chunk size, then we need to add
-#         # padding with " ". This indicates the we reached the end of the file
-#         # so we end loop here
-#         if len(chunk) % chunk_size != 0:
-#             end_loop = True
-#             chunk += " " * (chunk_size - len(chunk))
-
-#         # Append the encrypted chunk to the overall encrypted file
-#         encrypted += rsa.encrypt(chunk.encode(), public_partner)
-
-#         # Increase the offset by chunk size
-#         offset += chunk_size
-
-#     # Base 64 encode the encrypted file
-#     return base64.b64encode(encrypted)
-
-# Function that decrypts the message from the user, and prints it out
-
-
-# def decrypt_blob(encrypted_blob, private_key):
-#     """Function defined by us to decrypt the message encrypted by encrypt_blob function
-
-#     :param encrypted_blob: encrypted message
-#     :type encrypted_blob: bytes object
-#     :param private_key: private key of the user
-#     :return: returns the decrypted message
-#     :rtype: string
-#     """
-
-#     # Base 64 decode the data
-#     encrypted_blob = base64.b64decode(encrypted_blob)
-
-#     # In determining the chunk size, determine the private key length used in bytes.
-#     # The data will be in decrypted in chunks
-#     chunk_size = 128
-#     offset = 0
-#     decrypted = ""
-
-#     # keep loop going as long as we have chunks to decrypt
-#     while offset < len(encrypted_blob):
-#         # The chunk
-#         chunk = encrypted_blob[offset: offset + chunk_size]
-
-#         # Append the decrypted chunk to the overall decrypted file
-#         decrypted += rsa.decrypt(chunk, private_key).decode()
-
-#         # Increase the offset by chunk size
-#         offset += chunk_size
-
-#     return decrypted
-
 
 def show_message(sender, msg):
     """displays the (individual) message on the screen
@@ -164,6 +92,7 @@ def show_group_message(grpname, sender, msg):
         msg = colored(f"[{grpname}]", 'cyan')+"-" + colored(f"{sender}", 'green')+": "+msg
     else:
         msg = colored(msg, 'red')
+    print(msg)
 
 
 lock = threading.Lock()
@@ -298,12 +227,21 @@ def recv_message(private_key):
                     print(f"{group_name} has been deleted")
                 elif message.msg == 'failed_deleting_group':
                     print(f"Failed to delete {group_name}")
+                elif message.msg == 'made_admin':
+                    member  = input("Enter name of the member to make admin: ")
+                    data = pickle.dumps(msg('group',username,member,'admin',group_name))
+                    s.sendto(data, (host, port))
+                    conf = s.recv(buffer)
+                    message = pickle.loads(conf).msg
+                    if message == 'success':
+                        print(f"{member} has been added to the group {group_name}")
+                    else:
+                        print(f"{member} could not be added {group_name}")
                 else:
                     if message.sender != 'server':
                         decryptd_key = rsa.decrypt(base64.b64decode(message.aes_key), private_key)
                         decrypted_msg = ncryptr.decrypt(base64.b64decode(message.msg.encode()), decryptd_key)
-                        show_group_message(
-                            message.group_name, message.sender, decrypted_msg)
+                        show_group_message(message.group_name, message.sender, decrypted_msg.decode())
                     else:
                         show_group_message(
                             message.group_name, message.sender, message.msg)
@@ -411,12 +349,14 @@ def send_image(address):
                         get_pubkey(user_info_db_path, r_name[0]))
                     # message_ = encrypt_blob(image_str.decode(), public_partner)
                     ###################################
+                    # print(time.time())
                     AESkey = os.urandom(16)
-                    message_ = ncryptr.encrypt(image_str.decode(), AESkey)
+                    message_ = ncryptr.encrypt(image_str, AESkey)
                     rsa_ncryptd_key = rsa.encrypt(AESkey, public_partner)
+                    # print(rsa_ncryptd_key)
                     ###################################
                     package = pickle.dumps(
-                        msg('group_image', username, r_name[0], message_.decode(), grp_name, rsa_ncryptd_key))
+                        msg('group_image', username, r_name[0], base64.b64encode(message_).decode(), grp_name, base64.b64encode(rsa_ncryptd_key)))
                     s.sendto(package, (host, port))
 
 
@@ -669,7 +609,10 @@ def main():
                 s.sendto(data, (host, port))
                 change_in_thread()
             elif (chat == "\\make_admin"):
-                pass
+                grp = input("Enter name of the group: ")
+                data = pickle.dumps(msg('group', username, 'server', 'make_admin', grp))
+                s.sendto(data, (host, port))
+                change_in_thread()
         else:
             chat = f"{chat} " + colored(ctime(), 'blue')
             send_message(chat)

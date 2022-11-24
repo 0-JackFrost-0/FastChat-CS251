@@ -112,3 +112,6 @@ def in_grp(path, grpname, username):
     else:
         return True
 
+# def find_admin(path, grpname):
+#     connection = sqlite3.connect(path)
+#     cur = connection.cursor()
