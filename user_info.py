@@ -5,9 +5,9 @@ def change_status_online(username,path):
     """This function changes the status of the username in the table users to "ONLINE"
 
     :param username: The username of the user whose status you want to change
-    :type username: string
+    :type username: str
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -21,9 +21,9 @@ def change_status_offline(username,path):
     """This function changes the status of the username in the table users to "OFFLINE"
 
     :param username:  The username of the user whose status you want to change
-    :type username: string
+    :type username: str
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -38,7 +38,7 @@ def view_all(path):
 
 
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -53,7 +53,7 @@ def view_online(path):
     """This function prints all the users currently present in the database whose status is equal to "ONLINE"
 
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -68,7 +68,7 @@ def create_user_table(path):
     """Creates the table user if the table is not already present
 
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -84,18 +84,18 @@ def insert_to_db(cur,username,salt, password, status, port, pub_key):
     :param cur: The cursor to the connection made with the table users 
     :type cur: sqlite3.cursor
     :param username: The username of the user
-    :type username: string
+    :type username: str
     :param salt: Random text added to the password to make it more secure before encryption 
-    :type salt: string
+    :type salt: str
     :param password: The password of the user
-    :type password: string
+    :type password: str
     :param status: "ONLINE" or "OFFLINE" depending upon whether the user is currently active or not
-    :type status: string
+    :type status: str
     :param port: The port of the server to which the user is connected
     :type port: int
     :param pub_key: The RSA public key of the user
     :type pub_key: Returns true if data is successfully inserted else returns false
-    :return: _description_
+    :return: Returns True if the data is successfully inserted else returns false
     :rtype: bool
     """
 
@@ -110,10 +110,11 @@ def insert_to_db(cur,username,salt, password, status, port, pub_key):
 
 def check_username(username,path):
     """Checks if the user with the given username is present in the database
+
     :param username: The username of the user
-    :type username: string
+    :type username: str
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     :return:Returns true if user is present in the database else returns false
     :rtype: bool
     """
@@ -126,10 +127,6 @@ def check_username(username,path):
         return True
     else:
         return False
-    # if username in a:
-    #     return True
-    # else:
-    #     return False
     
 def store_new_info(path, username, salt,password, status, port, pub_key):
     """This function is used to insert data into the table users after checking if the user with the given username is already present or not
@@ -137,32 +134,30 @@ def store_new_info(path, username, salt,password, status, port, pub_key):
     :param cur: The cursor to the connection made with the table users 
     :type cur: sqlite3.cursor
     :param username: The username of the user
-    :type username: string
+    :type username: str
     :param salt: Random text added to the password to make it more secure before encryption 
-    :type salt: string
+    :type salt: str
     :param password: The password of the user
-    :type password: string
+    :type password: str
     :param status: "ONLINE" or "OFFLINE" depending upon whether the user is currently active or not
-    :type status: string
+    :type status: str
     :param port: The port of the server to which the user is connected
     :type port: int
     :param pub_key: The RSA public key of the user
     :type pub_key: Returns true if data is successfully inserted else returns false
-    :return: _description_
+    :return: Returns True if the data is successfully inserted else returns false
     :rtype: bool
     """
     #return True if success register
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     if(check_username(username,path)):
-        # print("shouldn't be here")
         cur.close()
         connection.commit()
         connection.close()
         return False
     else:
         if insert_to_db(cur,username, salt,password,status, port, pub_key):
-            # print("working properly")
             cur.close()
             connection.commit()
             connection.close()
@@ -174,7 +169,7 @@ def show_all_user_info(path):
     """Prints all the data stored in the table users
 
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -189,11 +184,11 @@ def check_login_info(username, password, path):
     """This function is used to authenticate the login info entered by the user
 
     :param username: The username of the user 
-    :type username: string
+    :type username: str
     :param password: The password entered by the user
-    :type password: string
+    :type password: str
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     :return: Returns true if the entered username and password is successfully authenticated else returns false
     :rtype: bool
     """
@@ -220,11 +215,11 @@ def get_pubkey(path, username):
     """This function is used to query for the public key of the user with the given username 
 
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     :param username: The username of the user 
-    :type username: string
+    :type username: str
     :return: Returns the public key if found else returns -1 as binary text  
-    :rtype: string
+    :rtype: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -263,7 +258,7 @@ def get_port(path, username):
     """Returns the port to which a given user is connected to
 
     :return: Returns the port if found else returns -1 as binary text  
-    :rtype: string
+    :rtype: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -282,7 +277,7 @@ def get_all_active_ports(path):
     """Returns all ports which are connected to users whose status is "ONLINE"
 
     :return: Returns the port if found else returns -1 as binary text  
-    :rtype: string
+    :rtype: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -295,7 +290,7 @@ def check_username_online(path, username):
     """Checks if a user with the given username is offline or online
 
     :return: Returns True if status is "ONLINE else returns False  
-    :rtype: string
+    :rtype: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -311,11 +306,11 @@ def check_status(path, username):
     """Returns the status of the user with the given username
 
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     :param username: The username of the user 
-    :type username: string
+    :type username: str
     :return: Returns "ONLINE" or "OFFLINE" depending upon the status
-    :rtype: string
+    :rtype: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -328,9 +323,9 @@ def update_port(path, username, port):
     """Updates the port to which the user is connected to the given port
 
     :param path: The address of the user_info database
-    :type path: string
+    :type path: str
     :param username: The username of the user 
-    :type username: string
+    :type username: str
     :param port: The port to which the user is connected
     :type port: int
     """
@@ -345,7 +340,7 @@ def set_all_offline(path):
     """Sets all users' status to "OFFLINE"
 
     :param path: address of the database
-    :type path: string
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()

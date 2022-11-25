@@ -1,10 +1,10 @@
 import sqlite3
 
 def create_unread_table(path):
-    """_summary_
+    """Creates a table to store the unread messages, if it doesn't exist
 
-    :param path: _description_
-    :type path: _type_
+    :param path: Path of the messages database
+    :type path: str
     """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
@@ -138,6 +138,53 @@ def insert_to_read_db(path,sender,receiver,message,type,datetime,aes_key,grp):
             query = '''INSERT INTO READ VALUES(?,?,?,?,?,?,?)'''
             cur.execute(query,(sender,receiver, message,type,datetime,aes_key,grp))
             print(f"Successfully stored the message for {receiver}")
+            connection.commit()
+            cur.close()
+            connection.close()
+            return True
+    except Exception as e:
+        print(e)
+        print(f"Failed to store the message for {receiver}")
+        return False
+
+def insert_to_read_db_silent(path,sender,receiver,message,type,datetime,aes_key,grp):
+    """Insert new entries in the read table
+
+    :param path: Path of the messages database
+    :type path: str
+    :param sender: Sender of the message
+    :type sender: str
+    :param receiver: Receiver of the message
+    :type receiver: str
+    :param message: The actual message sent
+    :type message: str
+    :param type: The type of the messsage sent
+    :type type: str
+    :param datetime: The date and time when the message was sent
+    :type datetime: str
+    :param aes_key:  The encrypted AES key to be stored for decrypting the message
+    :type aes_key: binary
+    :param grp: Gives the grp_name in which the message was shared, otherwise gives None if Direct message
+    :type grp: str
+    :return: Returns True if inserted successfully, else returns False
+    :rtype: bool
+    """
+    try:
+        connection = sqlite3.connect(path)
+        cur = connection.cursor()
+        count = cur.execute(f"SELECT COUNT(*) FROM READ where receiver = '{receiver}'").fetchall()[0][0]
+        if(count < 10):
+            query = '''INSERT INTO READ VALUES(?,?,?,?,?,?,?)'''
+            cur.execute(query,(sender,receiver, message,type,datetime,aes_key,grp))
+            connection.commit()
+            cur.close()
+            connection.close()
+            return True
+        else:
+            mintime = cur.execute(f"SELECT MIN(time) FROM READ where receiver = '{receiver}'").fetchall()[0][0]
+            cur.execute(f"DELETE FROM READ WHERE time= '{mintime}' ")
+            query = '''INSERT INTO READ VALUES(?,?,?,?,?,?,?)'''
+            cur.execute(query,(sender,receiver, message,type,datetime,aes_key,grp))
             connection.commit()
             cur.close()
             connection.close()

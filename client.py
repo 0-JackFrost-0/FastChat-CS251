@@ -1,9 +1,8 @@
-from user_info import *
+from user_info import change_status_offline, view_all, view_online, get_pubkey
 from messages import *
-from groups import *
+from groups import view_all_members, view_all_groups
 import sys, os
 import socket
-import select
 import rsa
 from aes import AESEncryptor
 import time
@@ -12,11 +11,9 @@ import getpass
 import pickle
 import threading
 from msg import *
-from colorama import init
 from termcolor import colored
 import base64
 from PIL import Image
-import subprocess
 
 
 
@@ -134,9 +131,6 @@ def recv_message(private_key):
                     show_message(message.sender, message.msg)
             elif (message.type == 'key'):
                 pass
-                # public_partner_key = message.msg
-            # elif (message.type == 'group'):
-            #     pass
             elif (message.type == 'disconnect'):
                 pass
             elif (message.type == 'image'):
@@ -184,6 +178,8 @@ def recv_message(private_key):
                         if message == 'success':
                             print(
                                 f"{member} has been added to the group {group_name}")
+                        elif message == 'user_not_exist':
+                            print(colored("The user with this username does not exist",'red'))
                         else:
                             print(f"{member} could not be added to the group")
                     show_admin_commands()
@@ -212,6 +208,8 @@ def recv_message(private_key):
                     if message == 'success':
                         print(
                             f"{member} has been kicked from the group {group_name}")
+                    elif message == 'user_not_exist':
+                            print(colored("The user with this username does not exist",'red'))
                     else:
                         print(f"{member} is not present in the group")
                 elif message.msg == 'failed_kicking':
@@ -243,7 +241,9 @@ def recv_message(private_key):
 
 # Function to send the message to the given username
 def send_message(message):
-    """Message given by the user is processed, encrypted and packed and sent to the server
+    """Message given by the user is processed, encrypted and packed and sent to the server.
+    There are 4 types of messages that can be made, direct or group messages, and images or text.
+    This function takes care of text messages
 
     :param message: message to be sent
     :type message: string
@@ -252,12 +252,9 @@ def send_message(message):
     
     if grp_or_ind == "i":
         r_name = input("Whom to send message?: ")
-        # if r_name in pub_keys:
         send_key = get_pubkey(user_info_db_path, r_name)
         if send_key != b"-1":
-            # public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
             public_partner = rsa.PublicKey.load_pkcs1(send_key)
-            # message = encrypt_blob(message, public_partner)
             ###################################
             # print(time.time())
             AESkey = os.urandom(16)
@@ -280,10 +277,8 @@ def send_message(message):
         if in_grp:
             for r_name in members:
                 if r_name[0] != username:
-                    # public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
                     public_partner = rsa.PublicKey.load_pkcs1(
                         get_pubkey(user_info_db_path, r_name[0]))
-                    # message_ = encrypt_blob(message, public_partner)
                     ###################################
                     AESkey = os.urandom(16)
                     message_ = ncryptr.encrypt(message.encode(), AESkey)
@@ -297,13 +292,19 @@ def send_message(message):
 
 
 def send_image(address):
-    """Image given by the user is processed, encrypted and packed and sent to the server
+    """Image given by the user is processed, encrypted and packed and sent to the server, similar to send_message.
+    There are 4 types of messages that can be made, direct or group messages, and images or text.
+    This function takes care of Images
 
     :param address: address of the image to be shared
     :type address: string
     """
-    with open(address, "rb") as imageFile:
-        image_str = base64.b64encode(imageFile.read())
+    try:
+        imageFile = open(address,"rb")
+    except:
+        print(colored("Wrong address entered",'red'))
+        return
+    image_str = base64.b64encode(imageFile.read())
     grp_or_ind = input(
         "Enter i for individual message and g for group message: ")
     if grp_or_ind == "i":
@@ -311,9 +312,7 @@ def send_image(address):
         # if r_name in pub_keys:
         send_key = get_pubkey(user_info_db_path, r_name)
         if send_key != b"-1":
-            # public_partner = rsa.PublicKey.load_pkcs1(pub_keys[r_name])
             public_partner = rsa.PublicKey.load_pkcs1(send_key)
-            # message = encrypt_blob(image_str.decode(), public_partner)
             ###################################
             AESkey = os.urandom(16)
             # message = ncryptr.encrypt(image_str.decode(), AESkey)
@@ -339,7 +338,6 @@ def send_image(address):
                 if r_name[0] != username:
                     public_partner = rsa.PublicKey.load_pkcs1(
                         get_pubkey(user_info_db_path, r_name[0]))
-                    # message_ = encrypt_blob(image_str.decode(), public_partner)
                     ###################################
                     # print(time.time())
                     AESkey = os.urandom(16)
@@ -386,7 +384,6 @@ def login():
             file = open(addr, 'wb')
             file.write(priv_key)
             s.sendto(mesg1, (host, port))
-            # s.sendto(mesg2, (host, port))
             conf = s.recv(buffer)
             message = pickle.loads(conf).msg
             if message == 'success':
@@ -399,19 +396,16 @@ def login():
 def show_welcome_message():
     """The Welcome Message is displayed on the screen
     """
-    # subprocess.run(["clear"])
     print(colored("Welcome to Command Line Messenger (CLM)", 'cyan'))
     print(colored("Some common commands that you can run are:", 'cyan'))
-    print(
-        colored("1) \\quit: To quit the messenger", 'green'))
-    print(colored(
-        "2) \\online - view all users that are currently online", 'green'))
-    print(colored("3) \\groups - view all groups that you are currently a part of", 'green'))
-    print(
-        colored("4) \\create - create a new group", 'green'))
-    print(colored("5) \\image - send images", 'green'))
-    print(colored("6) \\read - displays upto last 10 read messages", 'green'))
-    print(colored("7) \\unread - displays upto last 10 unread messages", 'green'))
+    print(colored("1) \\quit: To quit the messenger", 'green'))
+    print(colored("2) \\online - view all users that are currently online", 'green'))
+    print(colored("3) \\all - view all users of CLM", 'green'))
+    print(colored("4) \\groups - view all groups that you are currently a part of", 'green'))
+    print(colored("5) \\create - create a new group", 'green'))
+    print(colored("6) \\image - send images", 'green'))
+    print(colored("7) \\read - displays upto last 10 read messages", 'green'))
+    print(colored("8) \\unread - displays upto last 10 unread messages", 'green'))
     return
 
 
@@ -427,20 +421,20 @@ def show_admin_commands():
 
 
 def get_privkey(username):
-    """Obtains the private key of the user from the file
+    """Retrieves the private key which is stored locally on the user's device
 
-    :param username: usernaem
+    :param username: The username whose private key is to be retrieved
     :type username: str
-    :return: private key
+    :return: The private key of the username
+    :rtype: bytes
     """
     address = f"{username}_priv.txt"
     file = open(address, 'rb')
     priv_key = file.read()
     return priv_key
 
+
 # Main function, runs the whole Command Line GUI thingy, will decompose code further
-
-
 def main():
     """This is executed for the functioning on the client side.
     All the processes required are run by this.
@@ -580,7 +574,7 @@ def main():
                             show_message(row[0], decrypted_msg.decode())
                         else:
                             show_message(row[0], row[2])
-                    insert_to_read_db(messages_db_path,row[0],row[1],row[2],row[3],row[4],row[5],row[6])
+                    insert_to_read_db_silent(messages_db_path,row[0],row[1],row[2],row[3],row[4],row[5],row[6])
             elif (chat == "\\kick"):
                 grp = input("Enter name of the group: ")
                 data = pickle.dumps(msg('group', username, 'server', 'kick', grp))
@@ -606,6 +600,8 @@ def main():
                 data = pickle.dumps(msg('group', username, 'server', 'make_admin', grp))
                 s.sendto(data, (host, port))
                 change_in_thread()
+            else:
+                print(colored("INVALID COMMAND", 'red'))
         else:
             chat = f"{chat} " + colored(ctime(), 'blue')
             send_message(chat)

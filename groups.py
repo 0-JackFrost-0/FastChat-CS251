@@ -1,6 +1,17 @@
 import sqlite3
 
 def create_grp_table(path,grpname,username):
+    """Creates the table for the group with the given group name
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    :param username: Username of the usr
+    :type username: str
+    :return: Returns True if the table is successfully created else returns false
+    :rtype: bool
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     try:
@@ -17,6 +28,17 @@ def create_grp_table(path,grpname,username):
         return False
 
 def make_admin(path,grpname,username):
+    """Changes the value of the field admin to 1 where username is given
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    :param username: Username of the usr
+    :type username: str
+    :return: Returns True if the field is updated successfully else returns false
+    :rtype: bool
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     try:
@@ -32,6 +54,15 @@ def make_admin(path,grpname,username):
         return False
 
 def view_all_members(path,grpname):
+    """This is to retreive all the members present in a group
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    :return: Returns a list of all the usernames present in the table with the given group name
+    :rtype: list
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute(f"SELECT usernames from {grpname}")
@@ -41,6 +72,13 @@ def view_all_members(path,grpname):
     return user_info
 
 def drop_table(path,grpname):
+    """Deletes the table with the given group name
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute(f"DROP TABLE {grpname}")
@@ -49,6 +87,17 @@ def drop_table(path,grpname):
     connection.close()
 
 def add_member(path,grpname,username):
+    """This adds a new entry to the table with the given group name
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    :param username: Username of the usr
+    :type username: str
+    :return: Returns True if user is added successfully else returns false
+    :rtype: bool
+    """
     try:
         connection = sqlite3.connect(path)
         cur = connection.cursor()
@@ -64,6 +113,17 @@ def add_member(path,grpname,username):
         return False
 
 def check_admin(path,grpname,username):
+    """To check if a given user is an admin or not
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    :param username: Username of the usr
+    :type username: str
+    :return: Returns True if the given user is an admin else returns false
+    :rtype: bool
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     try:
@@ -80,6 +140,17 @@ def check_admin(path,grpname,username):
     return False
 
 def delete_member(path,grpname,username):
+    """To delete the entry of a user from the given group
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    :param username: Username of the usr
+    :type username: str
+    :return: Returns True if the entry is successfully deleted else returns false
+    :rtype: bool
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     try:
@@ -94,6 +165,13 @@ def delete_member(path,grpname,username):
 ## TODO
 ## Make this function work, with only current visible
 def view_all_groups(path, username):
+    """This prints all the groups currently present in the database
+
+    :param path: Address to the database 
+    :type path: str
+    :param username: Username of the usr
+    :type username: str
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     cur.execute(f"SELECT name FROM sqlite_master WHERE type='table'")
@@ -102,6 +180,18 @@ def view_all_groups(path, username):
     connection.close()
 
 def in_grp(path, grpname, username):
+    """To check if a given user is present in the group
+
+    :param path: Address to the database 
+    :type path: str
+    :param grpname: Name of the group
+    :type grpname: str
+    :param username: _description_
+    :param username: Username of the usr
+    :type username: str
+    :return: Returns True if user is present in the group else returns False
+    :rtype: bool
+    """
     connection = sqlite3.connect(path)
     cur = connection.cursor()
     result = cur.execute(f"SELECT * FROM {grpname} WHERE usernames = '{username}'").fetchall()

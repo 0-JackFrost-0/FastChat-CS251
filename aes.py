@@ -1,123 +1,54 @@
 from Crypto import Random
 from Crypto.Cipher import AES
-import os
-import os.path
-from os import listdir
-from os.path import isfile, join
-import time
-import base64
 
+# Referenced from the-javapocalypse on github, https://github.com/the-javapocalypse/Python-File-Encryptor
 class AESEncryptor:
+    """ The AES encryptor is used to provide E2E encryption for communication.
+    """
     def __init__(self, key):
+        """The default constructor for the encryptor, 
+
+        :param key: the default key, although this isn't used, as we generate new keys for every message
+        :type key: bytes
+        """
         self.key = key
 
     def pad(self, s):
+        """Adds padding to the message
+
+        :param s: the message to be padded
+        :type s: str
+        :return: the padded message in bytes
+        :rtype: bytes
+        """
         return s + b"\0" * (AES.block_size - len(s) % AES.block_size)
 
-    def encrypt(self, message, key ,key_size=256):
+    def encrypt(self, message, key):
+        """Encrypts a message, with a given key
+
+        :param message: The message to be encrypted
+        :type message: str
+        :param key: The key to be used for encryption
+        :type key: bytes
+        :return: Returns the ciphered text
+        :rtype: bytes
+        """
         message = self.pad(message)
         iv = Random.new().read(AES.block_size)
         cipher = AES.new(key, AES.MODE_CBC, iv)
         return iv + cipher.encrypt(message)
 
-    def encrypt_file(self, file_name):
-        with open(file_name, 'rb') as fo:
-            plaintext = fo.read()
-        # print(plaintext.decode())
-        enc = self.encrypt(plaintext, self.key)
-        print(base64.b64encode(enc).decode())
-        with open(file_name + ".enc", 'wb') as fo:
-            fo.write(enc)
-        # with open("enc"+file_name, 'wb') as fo:
-        #     fo.write(enc)
-        os.remove(file_name)
-
     def decrypt(self, ciphertext, key):
+        """Decrypts the cipher text with the provided key
+
+        :param ciphertext: The ciphered text which is to be deciphered
+        :type ciphertext: bytes
+        :param key: The key to be used for deciphering
+        :type key: bytes
+        :return: Returns the original message, in bytes form
+        :rtype: bytes
+        """
         iv = ciphertext[:AES.block_size]
         cipher = AES.new(key, AES.MODE_CBC, iv)
         plaintext = cipher.decrypt(ciphertext[AES.block_size:])
         return plaintext.rstrip(b"\0")
-
-    def decrypt_file(self, file_name):
-        with open(file_name, 'rb') as fo:
-            ciphertext = fo.read()
-        dec = self.decrypt(ciphertext, self.key)
-        # print(dec.decode())
-        with open(file_name[:-4], 'wb') as fo:
-            fo.write(dec)
-        os.remove(file_name)
-
-    def getAllFiles(self):
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        dirs = []
-        for dirName, subdirList, fileList in os.walk(dir_path):
-            for fname in fileList:
-                if (fname != 'script.py' and fname != 'data.txt.enc'):
-                    dirs.append(dirName + "\\" + fname)
-        return dirs
-
-    def encrypt_all_files(self):
-        dirs = self.getAllFiles()
-        for file_name in dirs:
-            self.encrypt_file(file_name)
-
-    def decrypt_all_files(self):
-        dirs = self.getAllFiles()
-        for file_name in dirs:
-            self.decrypt_file(file_name)
-
-
-# # key = b'[EX\xc8\xd5\xbfI{\xa2$\x05(\xd5\x18\xbf\xc0\x85)\x10nc\x94\x02)j\xdf\xcb\xc4\x94\x9d(\x9e'
-# key = os.urandom(16)
-# enc = AESEncryptor(key)
-# clear = lambda: os.system('cls')
-
-# if os.path.isfile('data.txt.enc'):
-#     # while True:
-#     #     password = str(input("Enter password: "))
-#     #     enc.decrypt_file("data.txt.enc")
-#     #     p = ''
-#     #     with open("data.txt", "r") as f:
-#     #         p = f.readlines()
-#     #     if p[0] == password:
-#     #         enc.encrypt_file("data.txt")
-#     #         break
-
-#     while True:
-#         clear()
-#         choice = int(input(
-#             "1. Press '1' to encrypt file.\n2. Press '2' to decrypt file.\n3. Press '3' to Encrypt all files in the directory.\n4. Press '4' to decrypt all files in the directory.\n5. Press '5' to exit.\n"))
-#         clear()
-#         if choice == 1:
-#             # start = time.time()
-#             enc.encrypt_file(str(input("Enter name of file to encrypt: ")))
-#             # enc.encrypt_file("long.txt")
-#             # enc.decrypt_file("long.txt.enc")
-#             # end = time.time()
-#             # print(end-start)
-#         elif choice == 2:
-#             enc.decrypt_file(str(input("Enter name of file to decrypt: ")))
-#         elif choice == 3:
-#             enc.encrypt_all_files()
-#         elif choice == 4:
-#             enc.decrypt_all_files()
-#         elif choice == 5:
-#             exit()
-#         else:
-#             print("Please select a valid option!")
-
-# else:
-#     while True:
-#         clear()
-#         password = str(input("Setting up stuff. Enter a password that will be used for decryption: "))
-#         repassword = str(input("Confirm password: "))
-#         if password == repassword:
-#             break
-#         else:
-#             print("Passwords Mismatched!")
-#     f = open("data.txt", "w+")
-#     f.write(password)
-#     f.close()
-#     enc.encrypt_file("data.txt")
-#     print("Please restart the program to complete the setup")
-#     time.sleep(15)
