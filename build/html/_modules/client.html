@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>client &mdash; FastChat  documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> FastChat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">bug_fixing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FastChat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      <li>client</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for client</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">user_info</span> <span class="k">import</span> <span class="n">change_status_offline</span><span class="p">,</span> <span class="n">view_all</span><span class="p">,</span> <span class="n">view_online</span><span class="p">,</span> <span class="n">get_pubkey</span>
+<span class="kn">from</span> <span class="nn">messages</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">groups</span> <span class="k">import</span> <span class="n">view_all_members</span><span class="p">,</span> <span class="n">view_all_groups</span>
+<span class="kn">import</span> <span class="nn">sys</span><span class="o">,</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">rsa</span>
+<span class="kn">from</span> <span class="nn">aes</span> <span class="k">import</span> <span class="n">AESEncryptor</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">ctime</span>
+<span class="kn">import</span> <span class="nn">getpass</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+<span class="kn">from</span> <span class="nn">msg</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">termcolor</span> <span class="k">import</span> <span class="n">colored</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+<span class="kn">from</span> <span class="nn">PIL</span> <span class="k">import</span> <span class="n">Image</span>
+
+
+
+<span class="c1"># basic variables</span>
+<span class="n">buffer</span> <span class="o">=</span> <span class="mi">4194304</span>
+<span class="n">username</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="c1"># path to database</span>
+<span class="n">user_info_db_path</span> <span class="o">=</span> <span class="s2">&quot;databases/userInfo.db&quot;</span>
+<span class="n">group_db_path</span> <span class="o">=</span> <span class="s2">&quot;databases/groups.db&quot;</span>
+<span class="n">messages_db_path</span> <span class="o">=</span> <span class="s2">&quot;databases/messages.db&quot;</span>
+
+
+<span class="c1"># if len(sys.argv) == 3:</span>
+<span class="c1">#     host = sys.argv[1]</span>
+<span class="c1">#     port = int(sys.argv[2])</span>
+<span class="c1"># else:</span>
+<span class="c1">#     print(f&quot;Usage: {sys.argv[0]} &lt;host&gt; &lt;port&gt;&quot;)</span>
+<span class="c1">#     sys.exit(1)</span>
+<span class="n">host</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span>
+<span class="n">port</span> <span class="o">=</span> <span class="mi">5555</span>
+<span class="n">load_balance_addr</span> <span class="o">=</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+
+<span class="c1"># Connecting to the load balancing server, to get the port to a server</span>
+<span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">welcm_msg</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">port</span><span class="p">)</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">welcm_msg</span><span class="p">),</span> <span class="n">load_balance_addr</span><span class="p">)</span>
+<span class="k">except</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;Can&#39;t connect to the load balancing server&quot;</span><span class="p">,</span> <span class="s1">&#39;red&#39;</span><span class="p">))</span>
+    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+
+<span class="c1"># finding the port of the server, to establish communication</span>
+<span class="c1"># port = int(pickle.loads(s.recv(buffer)))</span>
+<span class="c1"># try:</span>
+<span class="c1">#     pass</span>
+<span class="c1"># except:</span>
+<span class="c1">#     print(&quot;\33[31m\33[1m Can&#39;t connect to the server \33[0m&quot;)</span>
+<span class="c1">#     sys.exit()</span>
+
+<span class="c1"># Initialising </span>
+<span class="n">ncryptr</span> <span class="o">=</span> <span class="n">AESEncryptor</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">16</span><span class="p">))</span>
+
+<div class="viewcode-block" id="show_message"><a class="viewcode-back" href="../client.html#client.show_message">[docs]</a><span class="k">def</span> <span class="nf">show_message</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;displays the (individual) message on the screen</span>
+
+<span class="sd">    :param sender: name of the sender</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param msg: message to be displayed</span>
+<span class="sd">    :type msg: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sender</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sender</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">colored</span><span class="p">(</span><span class="s2">&quot;[Direct]&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-&quot;</span> <span class="o">+</span> \
+            <span class="n">colored</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{sender}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;: &quot;</span><span class="o">+</span><span class="n">msg</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">colored</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;red&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="show_group_message"><a class="viewcode-back" href="../client.html#client.show_group_message">[docs]</a><span class="k">def</span> <span class="nf">show_group_message</span><span class="p">(</span><span class="n">grpname</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="n">msg</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;displays the (individual) message on the screen</span>
+
+<span class="sd">    :param sender: name of the sender</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param msg: message to be displayed</span>
+<span class="sd">    :type msg: str</span>
+<span class="sd">    :param grpname: group in which message needs to be shared</span>
+<span class="sd">    :type grpname: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sender</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">):</span>
+        <span class="k">pass</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">sender</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">):</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">colored</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;[</span><span class="si">{grpname}</span><span class="s2">]&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">colored</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{sender}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;: &quot;</span><span class="o">+</span><span class="n">msg</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">msg</span> <span class="o">=</span> <span class="n">colored</span><span class="p">(</span><span class="n">msg</span><span class="p">,</span> <span class="s1">&#39;red&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">msg</span><span class="p">)</span></div>
+
+
+<span class="n">lock</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Lock</span><span class="p">()</span>
+<span class="n">in_thread</span> <span class="o">=</span> <span class="kc">False</span>
+
+
+<div class="viewcode-block" id="change_in_thread"><a class="viewcode-back" href="../client.html#client.change_in_thread">[docs]</a><span class="k">def</span> <span class="nf">change_in_thread</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Used to lock one of the threads during execution, avoids the entangling of threads</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">in_thread</span>
+    <span class="n">lock</span><span class="o">.</span><span class="n">acquire</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">in_thread</span><span class="p">:</span>
+        <span class="n">in_thread</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">in_thread</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">lock</span><span class="o">.</span><span class="n">release</span><span class="p">()</span></div>
+
+<span class="c1"># Function that receives the messages from the server, and takes appropriate action</span>
+<div class="viewcode-block" id="recv_message"><a class="viewcode-back" href="../client.html#client.recv_message">[docs]</a><span class="k">def</span> <span class="nf">recv_message</span><span class="p">(</span><span class="n">private_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Encrypted messages sent by server are recieved and decrypted and finally displayed on the screen.</span>
+<span class="sd">    Receives messages of type &quot;receive&quot;, &quot;group&quot;, &quot;disconnect&quot;, &quot;key&quot;, &quot;group&quot;, &quot;disconnect&quot;, &quot;image&quot;</span>
+<span class="sd">    and &quot;group-image&quot;. The type receive is for receiving direct messages, the rest are pretty self explanatory</span>
+
+<span class="sd">    :param private_key: key for decryption</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">msg_</span><span class="p">,</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">msg_</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">msg_</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">msg_</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;receive&#39;</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                    <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">aes_key</span><span class="p">),</span> <span class="n">private_key</span><span class="p">)</span>
+                    <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                    <span class="c1"># print(time.time())</span>
+                    <span class="n">show_message</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">show_message</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;key&#39;</span><span class="p">):</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;disconnect&#39;</span><span class="p">):</span>
+                <span class="k">pass</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;image&#39;</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Image received from </span><span class="si">{message.sender}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">address</span> <span class="o">=</span> <span class="s2">&quot;newimage.jpeg&quot;</span>
+                <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">aes_key</span><span class="p">),</span> <span class="n">private_key</span><span class="p">)</span>
+                <span class="n">image_str</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                <span class="n">decodeit</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+                <span class="n">decodeit</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">((</span><span class="n">image_str</span><span class="p">)))</span>
+                <span class="n">decodeit</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+                <span class="n">img</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;group_image&#39;</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span>
+                    <span class="n">f</span><span class="s2">&quot;Image received from </span><span class="si">{message.sender}</span><span class="s2"> on group </span><span class="si">{message.group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">address</span> <span class="o">=</span> <span class="s2">&quot;newimage.jpeg&quot;</span>
+                <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">aes_key</span><span class="p">),</span> <span class="n">private_key</span><span class="p">)</span>
+                <span class="n">image_str</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                <span class="n">decodeit</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+                <span class="n">decodeit</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">((</span><span class="n">image_str</span><span class="p">)))</span>
+                <span class="n">decodeit</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+                <span class="n">img</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;group&#39;</span><span class="p">):</span>
+                <span class="n">group_name</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">group_name</span>
+                <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;admin&#39;</span><span class="p">:</span>
+                    <span class="k">pass</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;not_admin&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;You do not have admin privileges for this group&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;success_created_table&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Successfully created </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Enter &#39;exit&#39; when you have finished adding members&quot;</span><span class="p">)</span>
+                    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                        <span class="n">member</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter the username of the member: &quot;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">member</span> <span class="o">==</span> <span class="s2">&quot;exit&quot;</span><span class="p">:</span>
+                            <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                                <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">member</span><span class="p">,</span> <span class="s1">&#39;exit&#39;</span><span class="p">,</span> <span class="n">group_name</span><span class="p">))</span>
+                            <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                            <span class="k">break</span>
+                        <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                            <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">member</span><span class="p">,</span> <span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="n">group_name</span><span class="p">))</span>
+                        <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                        <span class="n">conf</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+                        <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="o">.</span><span class="n">msg</span>
+                        <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s1">&#39;success&#39;</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span>
+                                <span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> has been added to the group </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> could not be added to the group&quot;</span><span class="p">)</span>
+                    <span class="n">show_admin_commands</span><span class="p">()</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;failed_create_table&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Failed to create </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="c1"># all add msgs</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;added_successfully&#39;</span><span class="p">:</span>
+                    <span class="n">member</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the member to add: &quot;</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">member</span><span class="p">,</span> <span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="n">group_name</span><span class="p">))</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                    <span class="n">conf</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+                    <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="o">.</span><span class="n">msg</span>
+                    <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s1">&#39;success&#39;</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span>
+                            <span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> has been added to the group </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> could not be added </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;kicked_successfully&#39;</span><span class="p">:</span>
+                    <span class="n">member</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the member to kick: &quot;</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">member</span><span class="p">,</span> <span class="s1">&#39;kick&#39;</span><span class="p">,</span> <span class="n">group_name</span><span class="p">))</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                    <span class="n">conf</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+                    <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="o">.</span><span class="n">msg</span>
+                    <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s1">&#39;success&#39;</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span>
+                            <span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> has been kicked from the group </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> is not present in the group&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;failed_kicking&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Failed to kick </span><span class="si">{message.sender}</span><span class="s2"> from </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;group_deleted&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{group_name}</span><span class="s2"> has been deleted&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;failed_deleting_group&#39;</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Failed to delete </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span> <span class="o">==</span> <span class="s1">&#39;made_admin&#39;</span><span class="p">:</span>
+                    <span class="n">member</span>  <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the member to make admin: &quot;</span><span class="p">)</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span><span class="n">username</span><span class="p">,</span><span class="n">member</span><span class="p">,</span><span class="s1">&#39;admin&#39;</span><span class="p">,</span><span class="n">group_name</span><span class="p">))</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                    <span class="n">conf</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+                    <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="o">.</span><span class="n">msg</span>
+                    <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s1">&#39;success&#39;</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> has been added to the group </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{member}</span><span class="s2"> could not be added </span><span class="si">{group_name}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">message</span><span class="o">.</span><span class="n">sender</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                        <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">aes_key</span><span class="p">),</span> <span class="n">private_key</span><span class="p">)</span>
+                        <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">msg</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                        <span class="n">show_group_message</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">group_name</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="n">show_group_message</span><span class="p">(</span>
+                            <span class="n">message</span><span class="o">.</span><span class="n">group_name</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">sender</span><span class="p">,</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span><span class="p">)</span>
+                <span class="n">change_in_thread</span><span class="p">()</span></div>
+
+
+<span class="c1"># Function to send the message to the given username</span>
+<div class="viewcode-block" id="send_message"><a class="viewcode-back" href="../client.html#client.send_message">[docs]</a><span class="k">def</span> <span class="nf">send_message</span><span class="p">(</span><span class="n">message</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Message given by the user is processed, encrypted and packed and sent to the server.</span>
+<span class="sd">    There are 4 types of messages that can be made, direct or group messages, and images or text.</span>
+<span class="sd">    This function takes care of text messages</span>
+
+<span class="sd">    :param message: message to be sent</span>
+<span class="sd">    :type message: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">grp_or_ind</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter i for individual message and g for group message: &quot;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">grp_or_ind</span> <span class="o">==</span> <span class="s2">&quot;i&quot;</span><span class="p">:</span>
+        <span class="n">r_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Whom to send message?: &quot;</span><span class="p">)</span>
+        <span class="n">send_key</span> <span class="o">=</span> <span class="n">get_pubkey</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">r_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">send_key</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">&quot;-1&quot;</span><span class="p">:</span>
+            <span class="n">public_partner</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span><span class="n">send_key</span><span class="p">)</span>
+            <span class="c1">###################################</span>
+            <span class="c1"># print(time.time())</span>
+            <span class="n">AESkey</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="n">AESkey</span><span class="p">)</span>
+            <span class="n">rsa_ncryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">AESkey</span><span class="p">,</span> <span class="n">public_partner</span><span class="p">)</span>
+            <span class="c1"># print(rsa_ncryptd_key)</span>
+            <span class="c1">###################################</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">r_name</span><span class="p">,</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">message</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(),</span><span class="kc">None</span><span class="p">,</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">rsa_ncryptd_key</span><span class="p">)))</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{r_name}</span><span class="s2"> doesn&#39;t exist&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">grp_or_ind</span> <span class="o">==</span> <span class="s2">&quot;g&quot;</span><span class="p">:</span>
+        <span class="n">in_grp</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">grp_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Which group to send message?: &quot;</span><span class="p">)</span>
+        <span class="n">members</span> <span class="o">=</span> <span class="n">view_all_members</span><span class="p">(</span><span class="n">group_db_path</span><span class="p">,</span> <span class="n">grp_name</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">username</span><span class="p">:</span>
+                <span class="n">in_grp</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">in_grp</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">r_name</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">r_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">username</span><span class="p">:</span>
+                    <span class="n">public_partner</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span>
+                        <span class="n">get_pubkey</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">r_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="c1">###################################</span>
+                    <span class="n">AESkey</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+                    <span class="n">message_</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">encode</span><span class="p">(),</span> <span class="n">AESkey</span><span class="p">)</span>
+                    <span class="n">rsa_ncryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">AESkey</span><span class="p">,</span> <span class="n">public_partner</span><span class="p">)</span>
+                    <span class="c1">###################################</span>
+                    <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">r_name</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">message_</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(),</span> <span class="n">grp_name</span><span class="p">,</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">rsa_ncryptd_key</span><span class="p">)))</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;You are not a part of this group&quot;</span><span class="p">,</span> <span class="s1">&#39;red&#39;</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="send_image"><a class="viewcode-back" href="../client.html#client.send_image">[docs]</a><span class="k">def</span> <span class="nf">send_image</span><span class="p">(</span><span class="n">address</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Image given by the user is processed, encrypted and packed and sent to the server, similar to send_message.</span>
+<span class="sd">    There are 4 types of messages that can be made, direct or group messages, and images or text.</span>
+<span class="sd">    This function takes care of Images</span>
+
+<span class="sd">    :param address: address of the image to be shared</span>
+<span class="sd">    :type address: string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">imageFile</span><span class="p">:</span>
+        <span class="n">image_str</span> <span class="o">=</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">imageFile</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="n">grp_or_ind</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span>
+        <span class="s2">&quot;Enter i for individual message and g for group message: &quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">grp_or_ind</span> <span class="o">==</span> <span class="s2">&quot;i&quot;</span><span class="p">:</span>
+        <span class="n">r_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Whom to send message?: &quot;</span><span class="p">)</span>
+        <span class="c1"># if r_name in pub_keys:</span>
+        <span class="n">send_key</span> <span class="o">=</span> <span class="n">get_pubkey</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">r_name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">send_key</span> <span class="o">!=</span> <span class="sa">b</span><span class="s2">&quot;-1&quot;</span><span class="p">:</span>
+            <span class="n">public_partner</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span><span class="n">send_key</span><span class="p">)</span>
+            <span class="c1">###################################</span>
+            <span class="n">AESkey</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+            <span class="c1"># message = ncryptr.encrypt(image_str.decode(), AESkey)</span>
+            <span class="c1"># rsa_ncryptd_key = rsa.encrypt(AESkey, public_partner)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">image_str</span><span class="p">,</span> <span class="n">AESkey</span><span class="p">)</span>
+            <span class="n">rsa_ncryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">AESkey</span><span class="p">,</span> <span class="n">public_partner</span><span class="p">)</span>
+            <span class="c1"># print(base64.b64encode(rsa_ncryptd_key))</span>
+            <span class="c1">###################################</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;image&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">r_name</span><span class="p">,</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">message</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(),</span> <span class="kc">None</span><span class="p">,</span><span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">rsa_ncryptd_key</span><span class="p">)))</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{r_name}</span><span class="s2"> doesn&#39;t exist&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">grp_or_ind</span> <span class="o">==</span> <span class="s2">&quot;g&quot;</span><span class="p">:</span>
+        <span class="n">grp_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Which group to send message?: &quot;</span><span class="p">)</span>
+        <span class="n">members</span> <span class="o">=</span> <span class="n">view_all_members</span><span class="p">(</span><span class="n">group_db_path</span><span class="p">,</span> <span class="n">grp_name</span><span class="p">)</span>
+        <span class="n">in_grp</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="n">username</span><span class="p">:</span>
+                <span class="n">in_grp</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">in_grp</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">r_name</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">r_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">username</span><span class="p">:</span>
+                    <span class="n">public_partner</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span>
+                        <span class="n">get_pubkey</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">r_name</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+                    <span class="c1">###################################</span>
+                    <span class="c1"># print(time.time())</span>
+                    <span class="n">AESkey</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">urandom</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+                    <span class="n">message_</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">image_str</span><span class="p">,</span> <span class="n">AESkey</span><span class="p">)</span>
+                    <span class="n">rsa_ncryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">encrypt</span><span class="p">(</span><span class="n">AESkey</span><span class="p">,</span> <span class="n">public_partner</span><span class="p">)</span>
+                    <span class="c1"># print(rsa_ncryptd_key)</span>
+                    <span class="c1">###################################</span>
+                    <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                        <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group_image&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">r_name</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">message_</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">(),</span> <span class="n">grp_name</span><span class="p">,</span> <span class="n">base64</span><span class="o">.</span><span class="n">b64encode</span><span class="p">(</span><span class="n">rsa_ncryptd_key</span><span class="p">)))</span>
+                    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="login"><a class="viewcode-back" href="../client.html#client.login">[docs]</a><span class="k">def</span> <span class="nf">login</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Function to verify login</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">username</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;1 - LOGIN&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;2 - SIGNUP&quot;</span><span class="p">)</span>
+    <span class="n">opt</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">input</span><span class="p">(</span><span class="s2">&quot;&gt;&gt;&gt; &quot;</span><span class="p">))</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">opt</span> <span class="o">==</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">username</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Username: &quot;</span><span class="p">)</span>
+            <span class="n">password</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getpass</span><span class="p">()</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">username</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="n">password</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;login&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+            <span class="n">conf</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="o">.</span><span class="n">msg</span>
+            <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s1">&#39;success&#39;</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Welcome back </span><span class="si">{username}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">opt</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Invalid login, please try again&quot;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">opt</span> <span class="o">==</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="n">username</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Username: &quot;</span><span class="p">)</span>
+            <span class="n">password</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getpass</span><span class="p">()</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">username</span><span class="o">+</span><span class="s2">&quot; &quot;</span><span class="o">+</span><span class="n">password</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;register&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+            <span class="n">public_key</span><span class="p">,</span> <span class="n">private_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">newkeys</span><span class="p">(</span><span class="mi">1024</span><span class="p">)</span>
+            <span class="n">mesg1</span> <span class="o">=</span> <span class="n">public_key</span><span class="o">.</span><span class="n">save_pkcs1</span><span class="p">(</span><span class="s2">&quot;PEM&quot;</span><span class="p">)</span>
+            <span class="n">priv_key</span> <span class="o">=</span> <span class="n">private_key</span><span class="o">.</span><span class="n">save_pkcs1</span><span class="p">(</span><span class="s2">&quot;PEM&quot;</span><span class="p">)</span>
+            <span class="n">addr</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{username}</span><span class="s2">_priv.txt&quot;</span>
+            <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">addr</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+            <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">priv_key</span><span class="p">)</span>
+            <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">mesg1</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+            <span class="n">conf</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">conf</span><span class="p">)</span><span class="o">.</span><span class="n">msg</span>
+            <span class="k">if</span> <span class="n">message</span> <span class="o">==</span> <span class="s1">&#39;success&#39;</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;You have successfully registered&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">opt</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Username already taken. Try another username&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="show_welcome_message"><a class="viewcode-back" href="../client.html#client.show_welcome_message">[docs]</a><span class="k">def</span> <span class="nf">show_welcome_message</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;The Welcome Message is displayed on the screen</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;Welcome to Command Line Messenger (CLM)&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;Some common commands that you can run are:&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;1) </span><span class="se">\\</span><span class="s2">quit: To quit the messenger&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;2) </span><span class="se">\\</span><span class="s2">online - view all users that are currently online&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;3) </span><span class="se">\\</span><span class="s2">all - view all users of CLM&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;4) </span><span class="se">\\</span><span class="s2">groups - view all groups that you are currently a part of&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;5) </span><span class="se">\\</span><span class="s2">create - create a new group&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;6) </span><span class="se">\\</span><span class="s2">image - send images&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;7) </span><span class="se">\\</span><span class="s2">read - displays upto last 10 read messages&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;8) </span><span class="se">\\</span><span class="s2">unread - displays upto last 10 unread messages&quot;</span><span class="p">,</span> <span class="s1">&#39;green&#39;</span><span class="p">))</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="show_admin_commands"><a class="viewcode-back" href="../client.html#client.show_admin_commands">[docs]</a><span class="k">def</span> <span class="nf">show_admin_commands</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Group commands are shared to the user creating the group</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;The commands available to the admin are:&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;- </span><span class="se">\\</span><span class="s2">add - Add a new user to the group&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;- </span><span class="se">\\</span><span class="s2">kick - Remove a user from a group&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;- </span><span class="se">\\</span><span class="s2">delgrp - Deletes the group&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">colored</span><span class="p">(</span><span class="s2">&quot;- </span><span class="se">\\</span><span class="s2">make_admin - To make another member an admin&quot;</span><span class="p">,</span> <span class="s1">&#39;cyan&#39;</span><span class="p">))</span>
+    <span class="k">return</span></div>
+
+
+<div class="viewcode-block" id="get_privkey"><a class="viewcode-back" href="../client.html#client.get_privkey">[docs]</a><span class="k">def</span> <span class="nf">get_privkey</span><span class="p">(</span><span class="n">username</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Retrieves the private key which is stored locally on the user&#39;s device</span>
+
+<span class="sd">    :param username: The username whose private key is to be retrieved</span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :return: The private key of the username</span>
+<span class="sd">    :rtype: bytes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">address</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{username}</span><span class="s2">_priv.txt&quot;</span>
+    <span class="n">file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span>
+    <span class="n">priv_key</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">priv_key</span></div>
+
+
+<span class="c1"># Main function, runs the whole Command Line GUI thingy, will decompose code further</span>
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../client.html#client.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;This is executed for the functioning on the client side.</span>
+<span class="sd">    All the processes required are run by this.</span>
+<span class="sd">    First it takes the login, then does whatever is asked by the user accordingly.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">login</span><span class="p">()</span>
+    <span class="n">show_welcome_message</span><span class="p">()</span>
+    <span class="n">public_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PublicKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span>
+        <span class="n">get_pubkey</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">username</span><span class="p">))</span>
+    <span class="n">private_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">PrivateKey</span><span class="o">.</span><span class="n">load_pkcs1</span><span class="p">(</span><span class="n">get_privkey</span><span class="p">(</span><span class="n">username</span><span class="p">))</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">public_key</span><span class="o">.</span><span class="n">save_pkcs1</span><span class="p">(</span><span class="s2">&quot;PEM&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;connect&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">message</span><span class="p">))</span>
+    <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+    <span class="n">receive_thread</span> <span class="o">=</span> <span class="n">threading</span><span class="o">.</span><span class="n">Thread</span><span class="p">(</span><span class="n">target</span><span class="o">=</span><span class="n">recv_message</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">private_key</span><span class="p">,))</span>
+    <span class="n">receive_thread</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">in_thread</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">chat</span> <span class="o">=</span> <span class="nb">input</span><span class="p">()</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chat</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">chat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">quit&quot;</span><span class="p">):</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span>
+                    <span class="n">msg</span><span class="p">(</span><span class="s1">&#39;disconnect&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;cancel&#39;</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">shutdown</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">SHUT_RDWR</span><span class="p">)</span>
+                <span class="n">receive_thread</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">()</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">online&quot;</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Online Users are:&quot;</span><span class="p">)</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="n">view_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">all&quot;</span><span class="p">):</span>
+                <span class="n">view_all</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">groups&quot;</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Existing groups are:&quot;</span><span class="p">)</span>
+                <span class="n">lines</span> <span class="o">=</span> <span class="n">view_all_groups</span><span class="p">(</span><span class="n">group_db_path</span><span class="p">,</span> <span class="n">username</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s1">&#39;</span><span class="se">\\</span><span class="s1">image&#39;</span><span class="p">):</span>
+                <span class="n">address</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter the address of the image: &quot;</span><span class="p">)</span>
+                <span class="n">send_image</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">read&quot;</span><span class="p">:</span>
+                <span class="n">msg_list</span> <span class="o">=</span> <span class="n">return_all_read_messages</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span> <span class="n">username</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">msg_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No read messages&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Last {len(msg_list)} read messages:&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">msg_list</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;group&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                            <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                            <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                            <span class="n">show_group_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">show_group_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;receive&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                            <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                            <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Image received from </span><span class="si">{row[0]}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">address</span> <span class="o">=</span> <span class="s2">&quot;newimage.jpeg&quot;</span>
+                        <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                        <span class="n">image_str</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                        <span class="n">decodeit</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">((</span><span class="n">image_str</span><span class="p">)))</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+                        <span class="n">img</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;group_image&#39;</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span>
+                            <span class="n">f</span><span class="s2">&quot;Image received from </span><span class="si">{row[0]}</span><span class="s2"> on group </span><span class="si">{row[6]}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">address</span> <span class="o">=</span> <span class="s2">&quot;newimage.jpeg&quot;</span>
+                        <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                        <span class="n">image_str</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                        <span class="n">decodeit</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">((</span><span class="n">image_str</span><span class="p">)))</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+                        <span class="n">img</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                            <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                            <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">unread&quot;</span><span class="p">:</span>
+                <span class="n">msg_list</span> <span class="o">=</span> <span class="n">return_all_unread_messages</span><span class="p">(</span>
+                    <span class="n">messages_db_path</span><span class="p">,</span> <span class="n">username</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">msg_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No unread messages&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Last {len(msg_list)} read messages:&quot;</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">msg_list</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;group&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                            <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                            <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                            <span class="n">show_group_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">show_group_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">6</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;receive&#39;</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                            <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                            <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="k">elif</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;image&#39;</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Image received from </span><span class="si">{row[0]}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">address</span> <span class="o">=</span> <span class="s2">&quot;newimage.jpeg&quot;</span>
+                        <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                        <span class="n">image_str</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                        <span class="n">decodeit</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">((</span><span class="n">image_str</span><span class="p">)))</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+                        <span class="n">img</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                    <span class="k">elif</span> <span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;group_image&#39;</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Image received from </span><span class="si">{row[0]}</span><span class="s2"> on group </span><span class="si">{row[5]}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">address</span> <span class="o">=</span> <span class="s2">&quot;newimage.jpeg&quot;</span>
+                        <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                        <span class="n">image_str</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                        <span class="n">decodeit</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">address</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">((</span><span class="n">image_str</span><span class="p">)))</span>
+                        <span class="n">decodeit</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+                        <span class="n">img</span> <span class="o">=</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">address</span><span class="p">)</span>
+                        <span class="n">img</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">if</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;server&#39;</span><span class="p">:</span>
+                            <span class="n">decryptd_key</span> <span class="o">=</span> <span class="n">rsa</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span> <span class="n">private_key</span><span class="p">)</span>
+                            <span class="n">decrypted_msg</span> <span class="o">=</span> <span class="n">ncryptr</span><span class="o">.</span><span class="n">decrypt</span><span class="p">(</span><span class="n">base64</span><span class="o">.</span><span class="n">b64decode</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">encode</span><span class="p">()),</span> <span class="n">decryptd_key</span><span class="p">)</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">decrypted_msg</span><span class="o">.</span><span class="n">decode</span><span class="p">())</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="n">show_message</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                    <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">row</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">row</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span><span class="n">row</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span><span class="n">row</span><span class="p">[</span><span class="mi">4</span><span class="p">],</span><span class="n">row</span><span class="p">[</span><span class="mi">5</span><span class="p">],</span><span class="n">row</span><span class="p">[</span><span class="mi">6</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">kick&quot;</span><span class="p">):</span>
+                <span class="n">grp</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the group: &quot;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;kick&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                <span class="n">change_in_thread</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">add&quot;</span><span class="p">):</span>
+                <span class="n">grp</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the group: &quot;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;add&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                <span class="n">change_in_thread</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">delgrp&quot;</span><span class="p">):</span>
+                <span class="n">grp</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the group: &quot;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;delete&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                <span class="n">change_in_thread</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">create&quot;</span><span class="p">):</span>
+                <span class="n">grp</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the group: &quot;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;create&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                <span class="n">change_in_thread</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="p">(</span><span class="n">chat</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">make_admin&quot;</span><span class="p">):</span>
+                <span class="n">grp</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Enter name of the group: &quot;</span><span class="p">)</span>
+                <span class="n">data</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;make_admin&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">))</span>
+                <span class="n">s</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+                <span class="n">change_in_thread</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">chat</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{chat}</span><span class="s2"> &quot;</span> <span class="o">+</span> <span class="n">colored</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s1">&#39;blue&#39;</span><span class="p">)</span>
+            <span class="n">send_message</span><span class="p">(</span><span class="n">chat</span><span class="p">)</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">main</span><span class="p">()</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">change_status_offline</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">user_info_db_path</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Brogrammers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>server &mdash; FastChat  documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> FastChat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">bug_fixing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FastChat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      <li>server</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for server</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">from</span> <span class="nn">user_info</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">groups</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">time</span> <span class="k">import</span> <span class="n">ctime</span>
+<span class="kn">import</span> <span class="nn">datetime</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">msg</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">messages</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">import</span> <span class="nn">bcrypt</span>
+<span class="kn">import</span> <span class="nn">base64</span>
+
+<span class="c1"># initializing database path, not required with postgresql</span>
+<span class="n">user_info_db_path</span> <span class="o">=</span> <span class="s2">&quot;databases/userInfo.db&quot;</span>
+<span class="n">group_info_db_path</span> <span class="o">=</span><span class="s2">&quot;databases/groups.db&quot;</span>
+<span class="n">messages_db_path</span> <span class="o">=</span> <span class="s2">&quot;databases/messages.db&quot;</span>
+
+<span class="c1">#signin stuff</span>
+<span class="c1"># if len(sys.argv)==3:</span>
+<span class="c1">#     HOST = sys.argv[1]</span>
+<span class="c1">#     PORT = int(sys.argv[2])</span>
+<span class="c1"># else:</span>
+<span class="c1">#     print(f&quot;Usage: {sys.argv[0]} &lt;host&gt; &lt;port&gt;&quot;)</span>
+<span class="c1">#     sys.exit(1)</span>
+<span class="n">HOST</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span>
+<span class="n">PORT</span> <span class="o">=</span> <span class="mi">5555</span>
+<span class="c1"># other global variables and constants</span>
+<span class="n">BUFSIZE</span> <span class="o">=</span> <span class="mi">4194304</span>
+<span class="n">ADDR</span> <span class="o">=</span> <span class="p">(</span><span class="n">HOST</span><span class="p">,</span> <span class="n">PORT</span><span class="p">)</span>
+<span class="n">AD</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="c1"># TODO</span>
+<span class="n">LOCAL</span> <span class="o">=</span> <span class="s1">&#39;127.0.0.1&#39;</span>
+<span class="n">pub_keys</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">groups</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="c1"># binding server socket</span>
+<span class="n">server_sock</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+<span class="n">server_sock</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">ADDR</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Listening on {(HOST,PORT)}&quot;</span><span class="p">)</span>
+<span class="n">create_user_table</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">)</span>
+<span class="n">set_all_offline</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">)</span>
+<span class="c1"># clear_msgs(messages_db_path)</span>
+
+<div class="viewcode-block" id="connection_messsage"><a class="viewcode-back" href="../server.html#server.connection_messsage">[docs]</a><span class="k">def</span> <span class="nf">connection_messsage</span><span class="p">(</span><span class="n">sender</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Connects a user, and sends a message to all users</span>
+
+<span class="sd">    :param sender: The username of the joined user</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{sender}</span><span class="s2"> has entered the chat &quot;</span>
+    <span class="n">change_status_online</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">user_info_db_path</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">get_all_active_ports</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="o">!=</span> <span class="n">sender</span><span class="p">:</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="normal_message"><a class="viewcode-back" href="../server.html#server.normal_message">[docs]</a><span class="k">def</span> <span class="nf">normal_message</span><span class="p">(</span><span class="n">msgtype</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sends Direct messages to users</span>
+
+<span class="sd">    :param msgtype: The type of message to be sent</span>
+<span class="sd">    :type msgtype: str</span>
+<span class="sd">    :param sender: The username of the sender of the message</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param receiver: The username of the receiver of the message</span>
+<span class="sd">    :type receiver: str</span>
+<span class="sd">    :param msg_: The acutual message to be delivered</span>
+<span class="sd">    :type msg_: str</span>
+<span class="sd">    :param grp: The name of the group, which will be None for direct messages</span>
+<span class="sd">    :type grp: str</span>
+<span class="sd">    :param data: The binary data received from the client, to pass onto the next</span>
+<span class="sd">    :type data: binary</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the client</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    :param aes_key: The encrypted AES key, used to decrypt the data</span>
+<span class="sd">    :type aes_key: binary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_username</span><span class="p">(</span><span class="n">receiver</span><span class="p">,</span> <span class="n">user_info_db_path</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">receiver</span><span class="p">):</span>
+            <span class="c1"># print(msg_)</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">get_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">receiver</span><span class="p">)))</span>
+            <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">msgtype</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{receiver}</span><span class="s2"> is offline but message has been stored&quot;</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
+            <span class="n">insert_to_unread_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">msgtype</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{receiver}</span><span class="s2"> does not exist&quot;</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="create_group"><a class="viewcode-back" href="../server.html#server.create_group">[docs]</a><span class="k">def</span> <span class="nf">create_group</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a new group, and adds members</span>
+
+<span class="sd">    :param sender: The username of the sender</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param grp: The name of the group to be formed</span>
+<span class="sd">    :type grp: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the client</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    :param aes_key: The encrypted AES key, used to decrypt the data</span>
+<span class="sd">    :type aes_key: binary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">create_grp_table</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;success_created_table&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+        <span class="n">addmem</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">server_sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">BUFSIZE</span><span class="p">))</span>
+        <span class="k">while</span> <span class="n">addmem</span><span class="o">.</span><span class="n">msg</span> <span class="o">!=</span> <span class="s1">&#39;exit&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">add_member</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">group_name</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+                <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;success&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+                    <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been added to the group </span><span class="si">{addmem.group_name}</span><span class="s2">&quot;</span>
+                    <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+                    <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">get_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">)))</span>
+                    <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been added to the group </span><span class="si">{addmem.group_name}</span><span class="s2">&quot;</span>
+                    <span class="n">insert_to_unread_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+            <span class="n">addmem</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">server_sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">BUFSIZE</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;failed_create_table&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="add_group_mems"><a class="viewcode-back" href="../server.html#server.add_group_mems">[docs]</a><span class="k">def</span> <span class="nf">add_group_mems</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Add new members to the group, checks if user is admin and adds new members appropriately</span>
+
+<span class="sd">    :param sender: The username of the user wanting to add members</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param grp: The name of the group</span>
+<span class="sd">    :type grp: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the client</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    :param aes_key: The encrypted AES key, used to decrypt the data</span>
+<span class="sd">    :type aes_key: binary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_admin</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;added_successfully&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+        <span class="n">stuff</span> <span class="o">=</span> <span class="n">server_sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">BUFSIZE</span><span class="p">)</span>
+        <span class="n">addmem</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stuff</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">add_member</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">group_name</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;success&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been added to the group </span><span class="si">{addmem.group_name}</span><span class="s2">&quot;</span>
+                <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+                <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">get_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">)))</span>
+                <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been added to the group </span><span class="si">{addmem.group_name}</span><span class="s2">&quot;</span>
+                <span class="n">insert_to_unread_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;failed_adding&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;not_admin&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="new_admin"><a class="viewcode-back" href="../server.html#server.new_admin">[docs]</a><span class="k">def</span> <span class="nf">new_admin</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates a new admin of a group. If the user is an admin, then makes another user admin</span>
+
+<span class="sd">    :param sender: The username of the user requesting make_admin</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param grp: The name of the group to add the new admin</span>
+<span class="sd">    :type grp: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the client</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    :param aes_key: The encrypted AES key, used to decrypt the data</span>
+<span class="sd">    :type aes_key: bytes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_admin</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;made_admin&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+        <span class="n">stuff</span> <span class="o">=</span> <span class="n">server_sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">BUFSIZE</span><span class="p">)</span>
+        <span class="n">addmem</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stuff</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">make_admin</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">group_name</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;success&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been made admin of the group </span><span class="si">{addmem.group_name}</span><span class="s2"> by </span><span class="si">{addmem.sender}</span><span class="s2">&quot;</span>
+                <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+                <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">get_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">)))</span>
+                <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been made admin of the group </span><span class="si">{addmem.group_name}</span><span class="s2"> by </span><span class="si">{addmem.sender}</span><span class="s2">&quot;</span>
+                <span class="n">insert_to_unread_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">addmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;failed_adding&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;not_admin&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="delete_group_"><a class="viewcode-back" href="../server.html#server.delete_group_">[docs]</a><span class="k">def</span> <span class="nf">delete_group_</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Deletes a group, if the user is an admin</span>
+
+<span class="sd">    :param sender: The username of user requesting deletion</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param grp: The name of the group to be deleted</span>
+<span class="sd">    :type grp: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the client</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    :param aes_key: The encrypted AES key, used to decrypt the data</span>
+<span class="sd">    :type aes_key: bytes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_admin</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;group_deleted&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+        <span class="n">members</span> <span class="o">=</span> <span class="n">view_all_members</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">)</span>
+        <span class="n">drop_table</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="n">members</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">sender</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                    <span class="n">message_</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;The group </span><span class="si">{grp}</span><span class="s2"> has been deleted by </span><span class="si">{sender}</span><span class="s2">&quot;</span>
+                    <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">message_</span><span class="p">))</span>
+                    <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">get_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span>
+                    <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">message_</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">message_</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;The group </span><span class="si">{grp}</span><span class="s2"> has been deleted by </span><span class="si">{sender}</span><span class="s2">&quot;</span>
+                    <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">member</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">message_</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;failed_deleting_group&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="kick_users"><a class="viewcode-back" href="../server.html#server.kick_users">[docs]</a><span class="k">def</span> <span class="nf">kick_users</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Removes users from a group, if the requesting user is an admin</span>
+
+<span class="sd">    :param sender: Username of user requesting a kick</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param grp: The group from which to delete user</span>
+<span class="sd">    :type grp: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the client</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    :param aes_key: The encrypted AES key, used to decrypt the data</span>
+<span class="sd">    :type aes_key: bytes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_admin</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;kicked_successfully&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+        <span class="n">stuff</span> <span class="o">=</span> <span class="n">server_sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">BUFSIZE</span><span class="p">)</span>
+        <span class="n">delmem</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">stuff</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">delete_member</span><span class="p">(</span><span class="n">group_info_db_path</span><span class="p">,</span> <span class="n">grp</span><span class="p">,</span> <span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;success&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;success&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">):</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been kicked from the group </span><span class="si">{delmem.group_name}</span><span class="s2"> by </span><span class="si">{delmem.sender}</span><span class="s2">&quot;</span>
+                <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+                <span class="c1"># server_sock.sendto(package, AD[delmem.receiver])</span>
+                <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">get_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">)))</span>
+                <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;You have been kicked from the group </span><span class="si">{delmem.group_name}</span><span class="s2"> by </span><span class="si">{delmem.sender}</span><span class="s2">&quot;</span>
+                <span class="n">insert_to_unread_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span><span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span><span class="n">message</span><span class="p">,</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="n">delmem</span><span class="o">.</span><span class="n">receiver</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;failed_kicking&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;group&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="s1">&#39;not_admin&#39;</span><span class="p">,</span> <span class="n">grp</span><span class="p">)),</span> <span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="normal_group_message"><a class="viewcode-back" href="../server.html#server.normal_group_message">[docs]</a><span class="k">def</span> <span class="nf">normal_group_message</span><span class="p">(</span><span class="n">msgtype</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sends a group message to all users</span>
+
+<span class="sd">    :param msgtype: The type of message to be sent</span>
+<span class="sd">    :type msgtype: str</span>
+<span class="sd">    :param sender: The username of the sender of the message</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param receiver: The username of the receiver of the message</span>
+<span class="sd">    :type receiver: str</span>
+<span class="sd">    :param msg_: The acutual message to be delivered</span>
+<span class="sd">    :type msg_: str</span>
+<span class="sd">    :param grp: The name of the group</span>
+<span class="sd">    :type grp: str</span>
+<span class="sd">    :param data: The binary data received from the client, to pass onto the next</span>
+<span class="sd">    :type data: binary</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the client</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    :param aes_key: The encrypted AES key, used to decrypt the data</span>
+<span class="sd">    :type aes_key: binary</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_username</span><span class="p">(</span><span class="n">receiver</span><span class="p">,</span> <span class="n">user_info_db_path</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span><span class="n">receiver</span><span class="p">):</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">get_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">receiver</span><span class="p">)))</span>
+            <span class="n">insert_to_read_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">msgtype</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{receiver}</span><span class="s2"> is offline but message has been stored&quot;</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
+            <span class="n">insert_to_unread_db</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">msgtype</span><span class="p">,</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">ctime</span><span class="p">(),</span> <span class="s2">&quot;</span><span class="si">%c</span><span class="s2">&quot;</span><span class="p">),</span><span class="n">aes_key</span><span class="p">,</span><span class="n">grp</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{receiver}</span><span class="s2"> does not exist&quot;</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="disconnect_manager"><a class="viewcode-back" href="../server.html#server.disconnect_manager">[docs]</a><span class="k">def</span> <span class="nf">disconnect_manager</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">addr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Manages the disconnection of a client</span>
+
+<span class="sd">    :param sender: The username of the disconnecting user</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the disconnecting user</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">check_username_online</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">port</span> <span class="ow">in</span> <span class="n">get_all_active_ports</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">):</span>
+            <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;disconnect&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span><span class="s1">&#39;cancel&#39;</span><span class="p">))</span>
+            <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="p">(</span><span class="n">LOCAL</span><span class="p">,</span> <span class="n">port</span><span class="p">))</span>
+        <span class="n">change_status_offline</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">user_info_db_path</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{sender}</span><span class="s2"> does not exist&quot;</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;receive&#39;</span><span class="p">,</span><span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span><span class="n">message</span><span class="p">))</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="register_user"><a class="viewcode-back" href="../server.html#server.register_user">[docs]</a><span class="k">def</span> <span class="nf">register_user</span><span class="p">(</span><span class="n">msg_</span><span class="p">,</span><span class="n">addr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Registers a new user in the database</span>
+
+<span class="sd">    :param msg_: The sign up info of the user</span>
+<span class="sd">    :type msg_: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the user</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">username</span><span class="p">,</span> <span class="n">password</span> <span class="o">=</span> <span class="p">(</span><span class="n">msg_</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">password</span> <span class="o">=</span> <span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span>
+    <span class="c1"># Adding the salt to password</span>
+    <span class="n">salt</span> <span class="o">=</span> <span class="n">bcrypt</span><span class="o">.</span><span class="n">gensalt</span><span class="p">()</span>
+    <span class="c1"># Hashing the password</span>
+    <span class="n">hashed</span> <span class="o">=</span> <span class="n">bcrypt</span><span class="o">.</span><span class="n">hashpw</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">salt</span><span class="p">)</span>
+    <span class="n">pubkey</span> <span class="o">=</span> <span class="n">server_sock</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="n">BUFSIZE</span><span class="p">)</span>
+    <span class="n">state</span> <span class="o">=</span> <span class="n">store_new_info</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">salt</span><span class="p">,</span><span class="n">hashed</span><span class="p">,</span><span class="s1">&#39;ONLINE&#39;</span><span class="p">,</span> <span class="n">addr</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">pubkey</span><span class="p">)</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;register&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">,</span><span class="s1">&#39;success&#39;</span><span class="p">))</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;register&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">,</span><span class="s1">&#39;fail&#39;</span><span class="p">))</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span></div>
+        
+<div class="viewcode-block" id="login_manager"><a class="viewcode-back" href="../server.html#server.login_manager">[docs]</a><span class="k">def</span> <span class="nf">login_manager</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">addr</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Handles login of users</span>
+
+<span class="sd">    :param sender: The login username</span>
+<span class="sd">    :type sender: str</span>
+<span class="sd">    :param msg_: The login message</span>
+<span class="sd">    :type msg_: str</span>
+<span class="sd">    :param addr: contains the tuple of the ip and the port of the login user</span>
+<span class="sd">    :type addr: tuple</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">username</span><span class="p">,</span> <span class="n">password</span> <span class="o">=</span> <span class="p">(</span><span class="n">msg_</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> 
+    <span class="n">password</span> <span class="o">=</span> <span class="n">password</span><span class="o">.</span><span class="n">encode</span><span class="p">()</span> 
+    <span class="n">state</span> <span class="o">=</span> <span class="n">check_login_info</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">user_info_db_path</span><span class="p">)</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;login&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">,</span><span class="s1">&#39;success&#39;</span><span class="p">))</span>
+        <span class="n">change_status_online</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span> <span class="n">user_info_db_path</span><span class="p">)</span>
+        <span class="n">update_port</span><span class="p">(</span><span class="n">user_info_db_path</span><span class="p">,</span> <span class="n">sender</span><span class="p">,</span> <span class="n">addr</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">package</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">msg</span><span class="p">(</span><span class="s1">&#39;login&#39;</span><span class="p">,</span> <span class="s1">&#39;server&#39;</span><span class="p">,</span> <span class="s1">&#39;unknown&#39;</span><span class="p">,</span> <span class="s1">&#39;fail&#39;</span><span class="p">))</span>
+        <span class="n">server_sock</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">package</span><span class="p">,</span> <span class="n">addr</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="main"><a class="viewcode-back" href="../server.html#server.main">[docs]</a><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Main function of the server, does all the processing and sends/receives messages from clients</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span><span class="p">,</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">server_sock</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="n">BUFSIZE</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;a connection closed&#39;</span><span class="p">)</span>
+            <span class="k">break</span>
+
+        <span class="c1"># to decode the data</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">msgtype</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">type</span>
+        <span class="n">sender</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">sender</span>
+        <span class="n">receiver</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">receiver</span>
+        <span class="n">msg_</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">msg</span>
+        <span class="n">grp</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">group_name</span>
+        <span class="n">aes_key</span> <span class="o">=</span> <span class="n">message</span><span class="o">.</span><span class="n">aes_key</span>
+        <span class="k">if</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="s1">&#39;connect&#39;</span><span class="p">:</span>
+            <span class="n">connection_messsage</span><span class="p">(</span><span class="n">sender</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="s1">&#39;receive&#39;</span><span class="p">:</span>
+            <span class="n">normal_message</span><span class="p">(</span><span class="n">msgtype</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="s1">&#39;group&#39;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">msg_</span> <span class="o">==</span> <span class="s2">&quot;create&quot;</span><span class="p">:</span>
+                <span class="n">create_group</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>           
+            <span class="k">elif</span> <span class="n">msg_</span> <span class="o">==</span> <span class="s2">&quot;add&quot;</span><span class="p">:</span>
+                <span class="n">add_group_mems</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">msg_</span> <span class="o">==</span> <span class="s2">&quot;make_admin&quot;</span><span class="p">:</span>
+                <span class="n">new_admin</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">msg_</span> <span class="o">==</span> <span class="s2">&quot;delete&quot;</span><span class="p">:</span>
+                <span class="n">delete_group_</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">msg_</span> <span class="o">==</span> <span class="s2">&quot;kick&quot;</span><span class="p">:</span>
+                <span class="n">kick_users</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">normal_group_message</span><span class="p">(</span><span class="n">msgtype</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>
+                
+        <span class="k">elif</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="s1">&#39;disconnect&#39;</span><span class="p">:</span>
+            <span class="n">disconnect_manager</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">addr</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="s1">&#39;register&#39;</span><span class="p">:</span>
+            <span class="n">register_user</span><span class="p">(</span><span class="n">msg_</span><span class="p">,</span><span class="n">addr</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">msgtype</span> <span class="o">==</span> <span class="s1">&#39;login&#39;</span><span class="p">:</span>
+            <span class="n">login_manager</span><span class="p">(</span><span class="n">sender</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">addr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">normal_message</span><span class="p">(</span><span class="n">msgtype</span><span class="p">,</span><span class="n">sender</span><span class="p">,</span><span class="n">receiver</span><span class="p">,</span><span class="n">msg_</span><span class="p">,</span><span class="n">grp</span><span class="p">,</span><span class="n">data</span><span class="p">,</span><span class="n">addr</span><span class="p">,</span><span class="n">aes_key</span><span class="p">)</span>
+
+
+    <span class="n">server_sock</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+    
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">main</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Brogrammers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>user_info module &mdash; FastChat  documentation</title><link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="server module" href="server.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="index.html" class="icon icon-home"> FastChat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">bug_fixing</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="aes.html">aes module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="client.html">client module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="groups.html">groups module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="load_balancer.html">load_balancer module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="messages.html">messages module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="msg.html">msg module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html">performance module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="server.html">server module</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">user_info module</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">FastChat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="modules.html">bug_fixing</a> &raquo;</li>
+      <li>user_info module</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/user_info.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="module-user_info">
+<span id="user-info-module"></span><h1>user_info module<a class="headerlink" href="#module-user_info" title="Permalink to this headline">¶</a></h1>
+<dl class="function">
+<dt id="user_info.change_status_offline">
+<code class="descclassname">user_info.</code><code class="descname">change_status_offline</code><span class="sig-paren">(</span><em>username</em>, <em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#change_status_offline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.change_status_offline" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function changes the status of the username in the table users to “OFFLINE”</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user whose status you want to change</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.change_status_online">
+<code class="descclassname">user_info.</code><code class="descname">change_status_online</code><span class="sig-paren">(</span><em>username</em>, <em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#change_status_online"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.change_status_online" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function changes the status of the username in the table users to “ONLINE”</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user whose status you want to change</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.check_login_info">
+<code class="descclassname">user_info.</code><code class="descname">check_login_info</code><span class="sig-paren">(</span><em>username</em>, <em>password</em>, <em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#check_login_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.check_login_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used to authenticate the login info entered by the user</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user</li>
+<li><strong>password</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The password entered by the user</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns true if the entered username and password is successfully authenticated else returns false</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.check_status">
+<code class="descclassname">user_info.</code><code class="descname">check_status</code><span class="sig-paren">(</span><em>path</em>, <em>username</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#check_status"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.check_status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the status of the user with the given username</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</li>
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns “ONLINE” or “OFFLINE” depending upon the status</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.check_username">
+<code class="descclassname">user_info.</code><code class="descname">check_username</code><span class="sig-paren">(</span><em>username</em>, <em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#check_username"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.check_username" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if the user with the given username is present in the database</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p>:return:Returns true if user is present in the database else returns false
+:rtype: bool</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.check_username_online">
+<code class="descclassname">user_info.</code><code class="descname">check_username_online</code><span class="sig-paren">(</span><em>path</em>, <em>username</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#check_username_online"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.check_username_online" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if a user with the given username is offline or online</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns True if status is “ONLINE else returns False</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.create_user_table">
+<code class="descclassname">user_info.</code><code class="descname">create_user_table</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#create_user_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.create_user_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates the table user if the table is not already present</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.get_all_active_ports">
+<code class="descclassname">user_info.</code><code class="descname">get_all_active_ports</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#get_all_active_ports"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.get_all_active_ports" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns all ports which are connected to users whose status is “ONLINE”</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns the port if found else returns -1 as binary text</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.get_port">
+<code class="descclassname">user_info.</code><code class="descname">get_port</code><span class="sig-paren">(</span><em>path</em>, <em>username</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#get_port"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.get_port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the port to which a given user is connected to</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns the port if found else returns -1 as binary text</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.get_pubkey">
+<code class="descclassname">user_info.</code><code class="descname">get_pubkey</code><span class="sig-paren">(</span><em>path</em>, <em>username</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#get_pubkey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.get_pubkey" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used to query for the public key of the user with the given username</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</li>
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns the public key if found else returns -1 as binary text</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.insert_to_db">
+<code class="descclassname">user_info.</code><code class="descname">insert_to_db</code><span class="sig-paren">(</span><em>cur</em>, <em>username</em>, <em>salt</em>, <em>password</em>, <em>status</em>, <em>port</em>, <em>pub_key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#insert_to_db"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.insert_to_db" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used to insert data into the table users</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cur</strong> (<em>sqlite3.cursor</em>) – The cursor to the connection made with the table users</li>
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user</li>
+<li><strong>salt</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Random text added to the password to make it more secure before encryption</li>
+<li><strong>password</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The password of the user</li>
+<li><strong>status</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – “ONLINE” or “OFFLINE” depending upon whether the user is currently active or not</li>
+<li><strong>port</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – The port of the server to which the user is connected</li>
+<li><strong>pub_key</strong> (<em>Returns true if data is successfully inserted else returns false</em>) – The RSA public key of the user</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns True if the data is successfully inserted else returns false</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.isPortinTable">
+<code class="descclassname">user_info.</code><code class="descname">isPortinTable</code><span class="sig-paren">(</span><em>path</em>, <em>port</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#isPortinTable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.isPortinTable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Checks if a given port is present in the tabel</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns true if found else false</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.set_all_offline">
+<code class="descclassname">user_info.</code><code class="descname">set_all_offline</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#set_all_offline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.set_all_offline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets all users’ status to “OFFLINE”</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – address of the database</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.show_all_user_info">
+<code class="descclassname">user_info.</code><code class="descname">show_all_user_info</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#show_all_user_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.show_all_user_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Prints all the data stored in the table users</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.store_new_info">
+<code class="descclassname">user_info.</code><code class="descname">store_new_info</code><span class="sig-paren">(</span><em>path</em>, <em>username</em>, <em>salt</em>, <em>password</em>, <em>status</em>, <em>port</em>, <em>pub_key</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#store_new_info"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.store_new_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function is used to insert data into the table users after checking if the user with the given username is already present or not</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>cur</strong> (<em>sqlite3.cursor</em>) – The cursor to the connection made with the table users</li>
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user</li>
+<li><strong>salt</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – Random text added to the password to make it more secure before encryption</li>
+<li><strong>password</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The password of the user</li>
+<li><strong>status</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – “ONLINE” or “OFFLINE” depending upon whether the user is currently active or not</li>
+<li><strong>port</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – The port of the server to which the user is connected</li>
+<li><strong>pub_key</strong> (<em>Returns true if data is successfully inserted else returns false</em>) – The RSA public key of the user</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns True if the data is successfully inserted else returns false</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.11)">bool</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.update_port">
+<code class="descclassname">user_info.</code><code class="descname">update_port</code><span class="sig-paren">(</span><em>path</em>, <em>username</em>, <em>port</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#update_port"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.update_port" title="Permalink to this definition">¶</a></dt>
+<dd><p>Updates the port to which the user is connected to the given port</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</li>
+<li><strong>username</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The username of the user</li>
+<li><strong>port</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.11)"><em>int</em></a>) – The port to which the user is connected</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.view_all">
+<code class="descclassname">user_info.</code><code class="descname">view_all</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#view_all"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.view_all" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function prints all the users currently present in the database along with their status</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="user_info.view_online">
+<code class="descclassname">user_info.</code><code class="descname">view_online</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/user_info.html#view_online"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#user_info.view_online" title="Permalink to this definition">¶</a></dt>
+<dd><p>This function prints all the users currently present in the database whose status is equal to “ONLINE”</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><em>str</em></a>) – The address of the user_info database</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="server.html" class="btn btn-neutral float-left" title="server module" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Brogrammers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

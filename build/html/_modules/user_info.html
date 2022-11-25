@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>user_info &mdash; FastChat  documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> FastChat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">bug_fixing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FastChat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      <li>user_info</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for user_info</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">sqlite3</span>
+<span class="kn">import</span> <span class="nn">bcrypt</span>
+
+<div class="viewcode-block" id="change_status_online"><a class="viewcode-back" href="../user_info.html#user_info.change_status_online">[docs]</a><span class="k">def</span> <span class="nf">change_status_online</span><span class="p">(</span><span class="n">username</span><span class="p">,</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function changes the status of the username in the table users to &quot;ONLINE&quot;</span>
+
+<span class="sd">    :param username: The username of the user whose status you want to change</span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;UPDATE USERS SET status = &#39;ONLINE&#39; where username = ? &#39;&#39;&#39;</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,(</span><span class="n">username</span><span class="p">,))</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="change_status_offline"><a class="viewcode-back" href="../user_info.html#user_info.change_status_offline">[docs]</a><span class="k">def</span> <span class="nf">change_status_offline</span><span class="p">(</span><span class="n">username</span><span class="p">,</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function changes the status of the username in the table users to &quot;OFFLINE&quot;</span>
+
+<span class="sd">    :param username:  The username of the user whose status you want to change</span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;UPDATE users SET status = &#39;OFFLINE&#39; where username = ? &#39;&#39;&#39;</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,(</span><span class="n">username</span><span class="p">,))</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="view_all"><a class="viewcode-back" href="../user_info.html#user_info.view_all">[docs]</a><span class="k">def</span> <span class="nf">view_all</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function prints all the users currently present in the database along with their status</span>
+
+
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT username,status from users&quot;</span><span class="p">)</span>
+    <span class="n">user_info</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">user_info</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;</span><span class="si">{i[0]}</span><span class="s2"> : </span><span class="si">{i[1]}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="view_online"><a class="viewcode-back" href="../user_info.html#user_info.view_online">[docs]</a><span class="k">def</span> <span class="nf">view_online</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function prints all the users currently present in the database whose status is equal to &quot;ONLINE&quot;</span>
+
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT username from users where status= &#39;ONLINE&#39;&quot;</span><span class="p">)</span>
+    <span class="n">user_info</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">user_info</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="create_user_table"><a class="viewcode-back" href="../user_info.html#user_info.create_user_table">[docs]</a><span class="k">def</span> <span class="nf">create_user_table</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates the table user if the table is not already present</span>
+
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY,salt TEXT,password TEXT, status TEXT, port INT, pub_key TEXT)&#39;&#39;&#39;</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="insert_to_db"><a class="viewcode-back" href="../user_info.html#user_info.insert_to_db">[docs]</a><span class="k">def</span> <span class="nf">insert_to_db</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span><span class="n">username</span><span class="p">,</span><span class="n">salt</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">pub_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function is used to insert data into the table users</span>
+
+<span class="sd">    :param cur: The cursor to the connection made with the table users </span>
+<span class="sd">    :type cur: sqlite3.cursor</span>
+<span class="sd">    :param username: The username of the user</span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :param salt: Random text added to the password to make it more secure before encryption </span>
+<span class="sd">    :type salt: str</span>
+<span class="sd">    :param password: The password of the user</span>
+<span class="sd">    :type password: str</span>
+<span class="sd">    :param status: &quot;ONLINE&quot; or &quot;OFFLINE&quot; depending upon whether the user is currently active or not</span>
+<span class="sd">    :type status: str</span>
+<span class="sd">    :param port: The port of the server to which the user is connected</span>
+<span class="sd">    :type port: int</span>
+<span class="sd">    :param pub_key: The RSA public key of the user</span>
+<span class="sd">    :type pub_key: Returns true if data is successfully inserted else returns false</span>
+<span class="sd">    :return: Returns True if the data is successfully inserted else returns false</span>
+<span class="sd">    :rtype: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;INSERT INTO users VALUES(?,?,?,?,?,?)&#39;&#39;&#39;</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">query</span><span class="p">,(</span><span class="n">username</span><span class="p">,</span><span class="n">salt</span><span class="p">,</span><span class="n">password</span><span class="p">,</span><span class="n">status</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">pub_key</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Successfully created user </span><span class="si">{username}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Failed to create user </span><span class="si">{username}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="check_username"><a class="viewcode-back" href="../user_info.html#user_info.check_username">[docs]</a><span class="k">def</span> <span class="nf">check_username</span><span class="p">(</span><span class="n">username</span><span class="p">,</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks if the user with the given username is present in the database</span>
+
+<span class="sd">    :param username: The username of the user</span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :return:Returns true if user is present in the database else returns false</span>
+<span class="sd">    :rtype: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#check if the username exist</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT username from users where username=?&quot;</span><span class="p">,(</span><span class="n">username</span><span class="p">,))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+    
+<div class="viewcode-block" id="store_new_info"><a class="viewcode-back" href="../user_info.html#user_info.store_new_info">[docs]</a><span class="k">def</span> <span class="nf">store_new_info</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">salt</span><span class="p">,</span><span class="n">password</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">pub_key</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function is used to insert data into the table users after checking if the user with the given username is already present or not</span>
+
+<span class="sd">    :param cur: The cursor to the connection made with the table users </span>
+<span class="sd">    :type cur: sqlite3.cursor</span>
+<span class="sd">    :param username: The username of the user</span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :param salt: Random text added to the password to make it more secure before encryption </span>
+<span class="sd">    :type salt: str</span>
+<span class="sd">    :param password: The password of the user</span>
+<span class="sd">    :type password: str</span>
+<span class="sd">    :param status: &quot;ONLINE&quot; or &quot;OFFLINE&quot; depending upon whether the user is currently active or not</span>
+<span class="sd">    :type status: str</span>
+<span class="sd">    :param port: The port of the server to which the user is connected</span>
+<span class="sd">    :type port: int</span>
+<span class="sd">    :param pub_key: The RSA public key of the user</span>
+<span class="sd">    :type pub_key: Returns true if data is successfully inserted else returns false</span>
+<span class="sd">    :return: Returns True if the data is successfully inserted else returns false</span>
+<span class="sd">    :rtype: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1">#return True if success register</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">check_username</span><span class="p">(</span><span class="n">username</span><span class="p">,</span><span class="n">path</span><span class="p">)):</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">insert_to_db</span><span class="p">(</span><span class="n">cur</span><span class="p">,</span><span class="n">username</span><span class="p">,</span> <span class="n">salt</span><span class="p">,</span><span class="n">password</span><span class="p">,</span><span class="n">status</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">pub_key</span><span class="p">):</span>
+            <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+            <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="show_all_user_info"><a class="viewcode-back" href="../user_info.html#user_info.show_all_user_info">[docs]</a><span class="k">def</span> <span class="nf">show_all_user_info</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Prints all the data stored in the table users</span>
+
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * from users&quot;</span><span class="p">)</span>
+    <span class="n">user_info</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">user_info</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="check_login_info"><a class="viewcode-back" href="../user_info.html#user_info.check_login_info">[docs]</a><span class="k">def</span> <span class="nf">check_login_info</span><span class="p">(</span><span class="n">username</span><span class="p">,</span> <span class="n">password</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function is used to authenticate the login info entered by the user</span>
+
+<span class="sd">    :param username: The username of the user </span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :param password: The password entered by the user</span>
+<span class="sd">    :type password: str</span>
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :return: Returns true if the entered username and password is successfully authenticated else returns false</span>
+<span class="sd">    :rtype: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;select salt from users where username=?&quot;</span><span class="p">,(</span><span class="n">username</span><span class="p">,))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">salt</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">hashed</span> <span class="o">=</span> <span class="n">bcrypt</span><span class="o">.</span><span class="n">hashpw</span><span class="p">(</span><span class="n">password</span><span class="p">,</span> <span class="n">salt</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;select password from users where username=?&quot;</span><span class="p">,(</span><span class="n">username</span><span class="p">,))</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">a</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="n">passw</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">passw</span> <span class="o">==</span> <span class="n">hashed</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="get_pubkey"><a class="viewcode-back" href="../user_info.html#user_info.get_pubkey">[docs]</a><span class="k">def</span> <span class="nf">get_pubkey</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;This function is used to query for the public key of the user with the given username </span>
+
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param username: The username of the user </span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :return: Returns the public key if found else returns -1 as binary text  </span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT pub_key FROM USERS WHERE username=?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">username</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c1"># print(key[0][0])</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;-1&quot;</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="sa">b</span><span class="s2">&quot;-1&quot;</span></div>
+
+<div class="viewcode-block" id="isPortinTable"><a class="viewcode-back" href="../user_info.html#user_info.isPortinTable">[docs]</a><span class="k">def</span> <span class="nf">isPortinTable</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks if a given port is present in the tabel</span>
+
+<span class="sd">    :return: Returns true if found else false</span>
+<span class="sd">    :rtype: bool</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT port FROM USERS WHERE port=?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">port</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchall</span><span class="p">())</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="get_port"><a class="viewcode-back" href="../user_info.html#user_info.get_port">[docs]</a><span class="k">def</span> <span class="nf">get_port</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the port to which a given user is connected to</span>
+
+<span class="sd">    :return: Returns the port if found else returns -1 as binary text  </span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT port FROM USERS WHERE username=?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">username</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="c1"># print(key[0][0])</span>
+        <span class="k">return</span> <span class="n">key</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">return</span> <span class="o">-</span><span class="mi">1</span></div>
+
+<div class="viewcode-block" id="get_all_active_ports"><a class="viewcode-back" href="../user_info.html#user_info.get_all_active_ports">[docs]</a><span class="k">def</span> <span class="nf">get_all_active_ports</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns all ports which are connected to users whose status is &quot;ONLINE&quot;</span>
+
+<span class="sd">    :return: Returns the port if found else returns -1 as binary text  </span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT username, port FROM USERS WHERE status = &#39;ONLINE&#39; &quot;</span><span class="p">)</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="check_username_online"><a class="viewcode-back" href="../user_info.html#user_info.check_username_online">[docs]</a><span class="k">def</span> <span class="nf">check_username_online</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Checks if a user with the given username is offline or online</span>
+
+<span class="sd">    :return: Returns True if status is &quot;ONLINE else returns False  </span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT * FROM USERS WHERE status = &#39;ONLINE&#39; AND username=?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">username</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">out</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="check_status"><a class="viewcode-back" href="../user_info.html#user_info.check_status">[docs]</a><span class="k">def</span> <span class="nf">check_status</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">username</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Returns the status of the user with the given username</span>
+
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param username: The username of the user </span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :return: Returns &quot;ONLINE&quot; or &quot;OFFLINE&quot; depending upon the status</span>
+<span class="sd">    :rtype: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">out</span> <span class="o">=</span> <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="s2">&quot;SELECT status FROM USERS WHERE username=?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">username</span><span class="p">,))</span><span class="o">.</span><span class="n">fetchall</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">out</span></div>
+
+<div class="viewcode-block" id="update_port"><a class="viewcode-back" href="../user_info.html#user_info.update_port">[docs]</a><span class="k">def</span> <span class="nf">update_port</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">port</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Updates the port to which the user is connected to the given port</span>
+
+<span class="sd">    :param path: The address of the user_info database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    :param username: The username of the user </span>
+<span class="sd">    :type username: str</span>
+<span class="sd">    :param port: The port to which the user is connected</span>
+<span class="sd">    :type port: int</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;UPDATE USERS SET port = </span><span class="si">{port}</span><span class="s2"> WHERE username=?&quot;</span><span class="p">,</span> <span class="p">(</span><span class="n">username</span><span class="p">,))</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="set_all_offline"><a class="viewcode-back" href="../user_info.html#user_info.set_all_offline">[docs]</a><span class="k">def</span> <span class="nf">set_all_offline</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Sets all users&#39; status to &quot;OFFLINE&quot;</span>
+
+<span class="sd">    :param path: address of the database</span>
+<span class="sd">    :type path: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connection</span> <span class="o">=</span> <span class="n">sqlite3</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">cur</span> <span class="o">=</span> <span class="n">connection</span><span class="o">.</span><span class="n">cursor</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">execute</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;UPDATE USERS SET status = &#39;OFFLINE&#39;&quot;</span><span class="p">)</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">commit</span><span class="p">()</span>
+    <span class="n">cur</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="n">connection</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Brogrammers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

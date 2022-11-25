@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html class="writer-html4" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>load_balancer &mdash; FastChat  documentation</title><link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+            <a href="../index.html" class="icon icon-home"> FastChat
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">bug_fixing</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">FastChat</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Module code</a> &raquo;</li>
+      <li>load_balancer</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for load_balancer</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">socket</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">cycle</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="kn">from</span> <span class="nn">messages</span> <span class="k">import</span> <span class="o">*</span>
+<span class="c1"># from server import start_server</span>
+<span class="kn">import</span> <span class="nn">subprocess</span><span class="o">,</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">signal</span>
+<span class="kn">import</span> <span class="nn">threading</span>
+
+<span class="n">messages_db_path</span> <span class="o">=</span> <span class="s2">&quot;databases/messages.db&quot;</span>
+<span class="n">create_read_table</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">)</span>
+<span class="n">create_unread_table</span><span class="p">(</span><span class="n">messages_db_path</span><span class="p">)</span>
+
+<span class="c1"># SERVER_POOL = [(&#39;localhost&#39;, 5000), (&#39;localhost&#39;, 5001)]</span>
+<span class="n">server_command</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<span class="c1"># servers = list()</span>
+
+<div class="viewcode-block" id="start_server"><a class="viewcode-back" href="../load_balancer.html#load_balancer.start_server">[docs]</a><span class="k">def</span> <span class="nf">start_server</span><span class="p">(</span><span class="n">command</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Subprocess used to start the servers</span>
+
+<span class="sd">    :param command: The python command to run all the servers</span>
+<span class="sd">    :type command: str</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">servers</span>
+    <span class="n">servers</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span></div>
+
+<div class="viewcode-block" id="LoadBalancer"><a class="viewcode-back" href="../load_balancer.html#load_balancer.LoadBalancer">[docs]</a><span class="k">class</span> <span class="nc">LoadBalancer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="c1"># Change docstring lmao, this isn&#39;t correct</span>
+    <span class="sd">&quot;&quot;&quot; Socket implementation of a load balancer. For the first time, the client connects to the load balancer. The load balancer assigns</span>
+<span class="sd">        a server to the client, and from then on the client directly communicates with the server</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+        <span class="c1"># Flow Diagram:</span>
+        <span class="c1"># +---------------+      +-----------------------------------------+      +---------------+</span>
+        <span class="c1"># | client socket | &lt;==&gt; | client-side socket | server-side socket | &lt;==&gt; | server socket |</span>
+        <span class="c1"># |   &lt;client&gt;    |      |          &lt; load balancer &gt;              |      |    &lt;server&gt;   |</span>
+        <span class="c1"># +---------------+      +-----------------------------------------+      +---------------+</span>
+        <span class="c1">#         ^                                                                        ^</span>
+        <span class="c1">#         |                                                                        |</span>
+        <span class="c1">#         |                                                                        |</span>
+        <span class="c1">#         \\_______________________________________________________________________/</span>
+
+<div class="viewcode-block" id="LoadBalancer.__init__"><a class="viewcode-back" href="../load_balancer.html#load_balancer.LoadBalancer.__init__">[docs]</a>    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ip</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">num_servers</span><span class="p">,</span> <span class="n">algorithm</span><span class="o">=</span><span class="s1">&#39;random&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Constructor for the load balancer</span>
+
+<span class="sd">        :param ip: The ip on which the load balancer is run</span>
+<span class="sd">        :type ip: str</span>
+<span class="sd">        :param port: The port on which the load balancer is run</span>
+<span class="sd">        :type port: int</span>
+<span class="sd">        :param num_servers: The number of servers to run</span>
+<span class="sd">        :type num_servers: int</span>
+<span class="sd">        :param algorithm: The load balancing strategy to use, defaults to &#39;random&#39;</span>
+<span class="sd">        :type algorithm: str, optional</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">global</span> <span class="n">server_command</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ip</span> <span class="o">=</span> <span class="n">ip</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">port</span> <span class="o">=</span> <span class="n">port</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span> <span class="o">=</span> <span class="n">algorithm</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">server_pool</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_servers</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">server_pool</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="mi">5000</span><span class="o">+</span><span class="n">i</span><span class="p">))</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">server_command</span> <span class="o">+=</span> <span class="n">f</span><span class="s2">&quot;python3 server.py &#39;localhost&#39; {5000+i} &amp; &quot;</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="n">start_server</span><span class="p">(</span><span class="n">server_command</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">iter</span> <span class="o">=</span> <span class="n">cycle</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_pool</span><span class="p">)</span>
+        <span class="c1"># init a client-side socket</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cs_socket</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_DGRAM</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">cs_socket</span><span class="o">.</span><span class="n">bind</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">ip</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">port</span><span class="p">))</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s1">&#39;init client-side socket: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cs_socket</span><span class="o">.</span><span class="n">getsockname</span><span class="p">(),))</span></div>
+
+<div class="viewcode-block" id="LoadBalancer.start"><a class="viewcode-back" href="../load_balancer.html#load_balancer.LoadBalancer.start">[docs]</a>    <span class="k">def</span> <span class="nf">start</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Upon starting the load balancer, it will find the address of the client, and send it to the accept function</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">data</span><span class="p">,</span> <span class="n">addr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cs_socket</span><span class="o">.</span><span class="n">recvfrom</span><span class="p">(</span><span class="mi">4026</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;a connection closed&#39;</span><span class="p">)</span>
+                <span class="n">servers</span><span class="o">.</span><span class="n">terminate</span><span class="p">()</span>
+                <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;./kill_server.sh </span><span class="si">{num_servers}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">shell</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">break</span>
+            <span class="c1"># to decode the data</span>
+            <span class="c1"># message = int(pickle.loads(data))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">on_accept</span><span class="p">(</span><span class="n">addr</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LoadBalancer.on_accept"><a class="viewcode-back" href="../load_balancer.html#load_balancer.LoadBalancer.on_accept">[docs]</a>    <span class="k">def</span> <span class="nf">on_accept</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cport</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The function provides the client and the server ports of each other to establish communication</span>
+
+<span class="sd">        :param cport: port of the client</span>
+<span class="sd">        :type cport: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">server_ip</span><span class="p">,</span> <span class="n">server_port</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">select_server</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">server_pool</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;sending port&quot;</span><span class="p">,</span> <span class="n">cport</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cs_socket</span><span class="o">.</span><span class="n">sendto</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">server_port</span><span class="p">)),</span> <span class="n">cport</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="LoadBalancer.round_robin"><a class="viewcode-back" href="../load_balancer.html#load_balancer.LoadBalancer.round_robin">[docs]</a>    <span class="k">def</span> <span class="nf">round_robin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">iter</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;A load balancing strategy, which selects the servers in an order</span>
+<span class="sd">        For eg:</span>
+<span class="sd">        round_robin([A, B, C, D]) --&gt; A B C D A B C D A B C D ...</span>
+
+<span class="sd">        :param iter: A cycle of server list</span>
+<span class="sd">        :type iter: cycle</span>
+<span class="sd">        :return: The next iteration (address) in the cycle</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># round_robin([A, B, C, D]) --&gt; A B C D A B C D A B C D ...</span>
+        <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="nb">iter</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="LoadBalancer.select_server"><a class="viewcode-back" href="../load_balancer.html#load_balancer.LoadBalancer.select_server">[docs]</a>    <span class="k">def</span> <span class="nf">select_server</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">server_list</span><span class="p">,</span> <span class="n">algorithm</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Selects the server for the client, by utilising one of the load balancing strategies</span>
+
+<span class="sd">        :param server_list: list of servers to choose from</span>
+<span class="sd">        :type server_list: _type_</span>
+<span class="sd">        :param algorithm: The alogrithm to implement load balancing</span>
+<span class="sd">        :type algorithm: str</span>
+<span class="sd">        :raises Exception: If some other algorithm is typed then it will throw error</span>
+<span class="sd">        :return: port of the assigned server</span>
+<span class="sd">        :rtype: int</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;random&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">server_list</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">algorithm</span> <span class="o">==</span> <span class="s1">&#39;round robin&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">round_robin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">iter</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;unknown algorithm: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">algorithm</span><span class="p">)</span></div></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">num_servers</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Usage: </span><span class="si">{sys.argv[0]}</span><span class="s2"> &lt;num_servers&gt; &lt;port&gt;&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">LoadBalancer</span><span class="p">(</span><span class="s1">&#39;localhost&#39;</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span>  <span class="n">num_servers</span><span class="p">,</span><span class="s1">&#39;random&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+    <span class="k">except</span> <span class="ne">KeyboardInterrupt</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Exiting Load Balancer&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, Brogrammers.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
