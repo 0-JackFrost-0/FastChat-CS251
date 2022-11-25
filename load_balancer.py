@@ -142,5 +142,6 @@ if __name__ == '__main__':
     try:
         LoadBalancer('localhost', port,  num_servers,'random').start()
     except KeyboardInterrupt:
+        subprocess.check_call(f"./kill_server.sh {num_servers}", shell=True)
         print("Exiting Load Balancer")
         sys.exit(1)
