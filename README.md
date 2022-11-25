@@ -13,6 +13,8 @@ The aim of our project was:
 ---
 ## Running Instructions
 ```python
+# To install required libraries
+pip install < requirements.txt
 python3 load_balancer.py <num_servers> <port>
 python3 client.py 127.0.0.1 <load_balancer_port>
 # this code will be run for as many users there are
