@@ -323,7 +323,10 @@ def send_image(address):
             ###################################
             package = pickle.dumps(
                 msg('image', username, r_name, base64.b64encode(message).decode(), None,base64.b64encode(rsa_ncryptd_key)))
-            s.sendto(package, (host, port))
+            try:
+                s.sendto(package, (host, port))
+            except:
+                print(colored("Image size too large",'red'))
         else:
             print(f"{r_name} doesn't exist")
     elif grp_or_ind == "g":
@@ -347,7 +350,10 @@ def send_image(address):
                     ###################################
                     package = pickle.dumps(
                         msg('group_image', username, r_name[0], base64.b64encode(message_).decode(), grp_name, base64.b64encode(rsa_ncryptd_key)))
-                    s.sendto(package, (host, port))
+                    try:
+                        s.sendto(package, (host, port))
+                    except:
+                        print(colored("Image size too large",'red'))
 
 
 def login():
