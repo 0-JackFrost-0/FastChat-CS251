@@ -20,7 +20,13 @@ pip install -r requirements.txt
 python3 load_balancer.py <num_servers> <port>
 python3 client.py 127.0.0.1 <load_balancer_port>
 # this code will be run for as many users there are
+
+### For MacOS Users
+For sending images, you need to run this command first,
+```bash
+sudo sysctl -w net.inet.udp.maxdgram=65535
 ```
+This increases the maximum UDP package size, allowing to share larger images.
 ---
 ## High Throughput
 We have implemented _multiple servers_, with _load balancing strategies_.
