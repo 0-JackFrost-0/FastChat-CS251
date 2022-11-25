@@ -13,6 +13,8 @@ The aim of our project was:
 ---
 ## Running Instructions
 ```python
+mkdir databases
+chmod +x kill_server.sh
 # To install required libraries
 pip install < requirements.txt
 python3 load_balancer.py <num_servers> <port>
